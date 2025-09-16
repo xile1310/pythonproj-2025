@@ -9,23 +9,20 @@ This beginner-friendly Streamlit app detects potential phishing emails using sim
 - Suspicious URL Detection
 - Final Risk Scoring (score > 10 => Phishing)
 
-## Install (Windows PowerShell)
-```powershell
-cd $env:USERPROFILE\phish-detector
+## Activating virtual environment
+
 python -m venv .venv
+
 .\.venv\Scripts\Activate.ps1
+
+## Installing Dependencies
+```
 pip install -r requirements.txt
 ```
 
 ## Run
-```powershell
-streamlit run app.py
 ```
+streamlit run phish-detector/app.py
 
-## Use
-1) Click Browse files to upload any file.  
-2) Click Analyze Email  
-3) See: Whitelist, Keyword Position, Edit Distance, Suspicious URLs, Final Scoring.  
-4) Final score > 10 => Phishing, else Safe.
 
-Dataset reference: SpamAssassin Public Corpus â€” `https://www.kaggle.com/datasets/beatoa/spamassassin-public-corpus`
+Dataset reference: SpamAssassin Public Corpus” `https://www.kaggle.com/datasets/beatoa/spamassassin-public-corpus`
