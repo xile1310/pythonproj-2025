@@ -10,10 +10,12 @@ This beginner-friendly Streamlit app detects potential phishing emails using sim
 - Final Risk Scoring (score > 10 => Phishing)
 
 ## Activating virtual environment
-
+```
 python -m venv .venv
-
+```
+```
 .\.venv\Scripts\Activate.ps1
+```
 
 ## Installing Dependencies
 ```
@@ -23,6 +25,6 @@ pip install -r requirements.txt
 ## Run
 ```
 streamlit run phish-detector/app.py
-
+```
 
 Dataset reference: SpamAssassin Public Corpus” `https://www.kaggle.com/datasets/beatoa/spamassassin-public-corpus`
