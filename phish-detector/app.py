@@ -11,12 +11,10 @@ import streamlit as st  # import streamlit for UI
 import os  # import os for filesystem paths
 from phishdetector.utils import save_and_rename_to_txt, read_text_file  # IO helpers
 from main import analyze_email_text  # analyzer
-from phishdetector import (  # runtime configuration helpers
+from phishdetector.rules import (  # runtime configuration helpers and constants
     add_whitelisted_domains,
     add_known_brand_names,
     add_suspicious_keywords,
-)
-from phishdetector.rules import (
     WHITELISTED_DOMAINS,
     KNOWN_BRAND_NAMES,
     SUSPICIOUS_KEYWORDS,
