@@ -5,7 +5,7 @@ import streamlit as st
 from rules import (
     classify_email,
     LEGIT_DOMAINS,
-    SUSPICIOUS_KEYWORDS,
+    SUS_KEYWORDS,
     load_config_to_rules,
     save_rules_to_config,
     reset_to_defaults,
@@ -59,13 +59,13 @@ with tab_analyze:
             f"Result: {label}  •  Suspicion Score: {score}"
         )
 
-        # NEW: compute per-rule contributions for a clear breakdown
+        # compute per-rule contributions for a clear breakdown
         w = whitelist_check(sender)
         k = keyword_check(subject, body)
         e = edit_distance_check(sender)
         u = suspicious_url_check(subject, body)
         total = w + k + e + u  # should match the score
-        
+
         #shows how scoring works
         st.markdown("**Scoring summary:**")
         st.caption(
@@ -126,16 +126,16 @@ with tab_settings:
     with k2:
         if st.button("Add keyword"):
             if new_kw.strip():
-                SUSPICIOUS_KEYWORDS.add(new_kw.strip().lower())
+                SUS_KEYWORDS.add(new_kw.strip().lower())
                 save_rules_to_config()
                 st.success(f"Added: {new_kw.strip().lower()}")
 
     #remove one or more suspicious keywords
-    if SUSPICIOUS_KEYWORDS:
-        to_remove_k = st.multiselect("Remove keywords", sorted(SUSPICIOUS_KEYWORDS))
+    if SUS_KEYWORDS:
+        to_remove_k = st.multiselect("Remove keywords", sorted(SUS_KEYWORDS))
         if st.button("Remove keyword(s)"):
             for k in to_remove_k:
-                SUSPICIOUS_KEYWORDS.discard(k)
+                SUS_KEYWORDS.discard(k)
             save_rules_to_config()
             st.warning(f"Removed: {', '.join(to_remove_k) or 'None'}")
     else:
