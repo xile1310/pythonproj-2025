@@ -110,3 +110,9 @@ Thumbs.db
 # Project specific
 uploads/
 *.log
+phish-detector/
+phish-detector-version2/__pycache__/
+phish-detector-version2/dataset/
+phish-detector-version2/results.csv
+phish-detector-version2/results_summary.csv
+phish-detector-version2/config.json

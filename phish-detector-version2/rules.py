@@ -15,10 +15,13 @@ DEFAULT_CONFIG = {
     "legit_domains": ["singapore.tech.edu.sg"],
     "keywords": ["urgent", "verify", "account", "password", "click"],
 }
-CONFIG_PATH = "config.json"
+CONFIG_PATH = os.path.join(os.path.dirname(__file__), "config.json")
 # ===== Mutable sets used by rules =====
 LEGIT_DOMAINS = set()
 SUSPICIOUS_KEYWORDS = set()
+
+# Backwards-compatibility: older UI imports SUS_KEYWORDS
+SUS_KEYWORDS = SUSPICIOUS_KEYWORDS
 
 # ---------- Config helpers (single source of truth) ----------
 
