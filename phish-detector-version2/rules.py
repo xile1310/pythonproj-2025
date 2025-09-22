@@ -1,4 +1,4 @@
-# rules.py
+
 """
 Rule-based phishing detector (single-list design).
 - One list: LEGIT_DOMAINS (used for whitelist + edit-distance lookalikes)
@@ -17,17 +17,17 @@ from typing import Dict, List, Tuple
 from urllib.parse import urlparse
 
 # This is the default configuration if json file not exist
-DEFAULT_CONFIG = {
-    "legit_domains": ["singapore.tech.edu.sg"],
+DEFAULT_CONFIGURATION = {
+    "legit_domains": ["singapore.tech.edu.sg","paypal.com","google.com"],
     "keywords": ["urgent", "verify", "account", "password", "click"],
 }
-CONFIG_PATH = os.path.join(os.path.dirname(__file__), "config.json")
-# ===== Mutable sets used by rules =====
-LEGIT_DOMAINS = set()
-SUSPICIOUS_KEYWORDS = set()
+CONFIG_PATH = "config.json"
 
-# Backwards-compatibility: older UI imports SUS_KEYWORDS
-SUS_KEYWORDS = SUSPICIOUS_KEYWORDS
+LEGIT_DOMAINS = set()
+SUS_KEYWORDS = set()
+
+# Backwards-compatibility: expose both names
+SUSPICIOUS_KEYWORDS = SUS_KEYWORDS
 
 # ---------- Constants (document rule weights/thresholds) ----------
 
@@ -55,7 +55,7 @@ URL_PATTERN = re.compile(r"http[s]?://\S+")
 
 # ---------- Config helpers (single source of truth) ----------
 
-def _persist(path: str, cfg: Dict[str, List[str]]) -> None:
+def persist(path: str, cfg: Dict[str, List[str]]) -> None:
     """Write configuration to disk (best-effort, no exceptions raised)."""
     try:
         with open(path, "w", encoding="utf-8") as f:
@@ -64,27 +64,27 @@ def _persist(path: str, cfg: Dict[str, List[str]]) -> None:
         # Best-effort persistence; intentionally silent to avoid UI crashes
         pass
 
-def _apply_cfg(cfg: Dict[str, List[str]]) -> None:
+def apply_cfg(cfg: Dict[str, List[str]]) -> None:
     """Copy cfg values into module-level sets (lowercased)."""
     LEGIT_DOMAINS.clear()
     LEGIT_DOMAINS.update({d.strip().lower() for d in cfg.get("legit_domains", []) if d.strip()})
-    SUSPICIOUS_KEYWORDS.clear()
-    SUSPICIOUS_KEYWORDS.update({k.strip().lower() for k in cfg.get("keywords", []) if k.strip()})
+    SUS_KEYWORDS.clear()
+    SUS_KEYWORDS.update({k.strip().lower() for k in cfg.get("keywords", []) if k.strip()})
 
 def load_config_to_rules(path: str = CONFIG_PATH) -> None:
     """
-    Load config.json. If file is missing, create from defaults.
-    If an old schema is found (whitelist/brands), migrate to legit_domains.
+    load config.json if it does not exist create a new one using DEFAULT_CONFIGURATION
+    else if is different format it will fix it.
     """
     if os.path.exists(path):
         try:
             with open(path, "r", encoding="utf-8") as f:
                 cfg = json.load(f)
         except Exception:
-            cfg = DEFAULT_CONFIG.copy()
+            cfg = DEFAULT_CONFIGURATION.copy()
     else:
-        cfg = DEFAULT_CONFIG.copy()
-        _persist(path, cfg)
+        cfg = DEFAULT_CONFIGURATION.copy()
+        persist(path, cfg)
 
     # Migrate old schema → new (whitelist + brands → legit_domains)
     if "legit_domains" not in cfg:
@@ -93,24 +93,24 @@ def load_config_to_rules(path: str = CONFIG_PATH) -> None:
         cfg["legit_domains"] = sorted({*wl, *br})
         cfg.pop("whitelist", None)
         cfg.pop("brands", None)
-        _persist(path, cfg)
+        persist(path, cfg)
 
     cfg.setdefault("legit_domains", [])
     cfg.setdefault("keywords", [])
-    _apply_cfg(cfg)
+    apply_cfg(cfg)
 
 def save_rules_to_config(path: str = CONFIG_PATH) -> None:
     """Persist current sets to config.json."""
     cfg = {
         "legit_domains": sorted(LEGIT_DOMAINS),
-        "keywords": sorted(SUSPICIOUS_KEYWORDS),
+        "keywords": sorted(SUS_KEYWORDS),
     }
-    _persist(path, cfg)
+    persist(path, cfg)
 
 def reset_to_defaults(path: str = CONFIG_PATH) -> None:
     """Reset sets + config.json to DEFAULT_CONFIG."""
-    _apply_cfg(DEFAULT_CONFIG)
-    _persist(path, DEFAULT_CONFIG)
+    apply_cfg(DEFAULT_CONFIGURATION)
+    persist(path, DEFAULT_CONFIGURATION)
 
 # Load config when module is imported
 load_config_to_rules()
@@ -173,7 +173,7 @@ def keyword_check(subject: str, body: str) -> int:
     s, b = subject.lower(), body.lower()
     score = 0
     early = b[:EARLY_BODY_WINDOW]
-    for kw in SUSPICIOUS_KEYWORDS:
+    for kw in SUS_KEYWORDS:
         if kw in s:      score += SUBJECT_KEYWORD_WEIGHT
         if kw in b:      score += BODY_KEYWORD_WEIGHT
         if kw in early:  score += EARLY_BODY_BONUS_WEIGHT
