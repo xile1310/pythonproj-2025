@@ -52,4 +52,3 @@ config.json stores your rules for whitelist domain and keywords.
 
 ```
 Dataset reference: SpamAssassin Public Corpus” `https://www.kaggle.com/datasets/beatoa/spamassassin-public-corpus`
-```
