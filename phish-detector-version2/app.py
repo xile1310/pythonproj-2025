@@ -9,7 +9,6 @@ from rules import (
     load_config_to_rules,
     save_rules_to_config,
     reset_to_defaults,
-
     whitelist_check,
     keyword_check,
     edit_distance_check,
@@ -24,8 +23,10 @@ st.title("📧 Simple Phishing Email Detector") #big title displayed at the top 
 
 # Load configuration
 if "config_loaded" not in st.session_state:
-    load_config_to_rules() #load saved rules from config.json
-    st.session_state["config_loaded"] = True #mark config as already loaded
+    # load saved rules from config.json
+    load_config_to_rules()
+    # mark config as already loaded
+    st.session_state["config_loaded"] = True
 
 tab_analyze, tab_settings = st.tabs(["🔎 Analyze Email", "⚙️ Settings"]) #created 2 tabs analyze email and settings
 
@@ -35,18 +36,22 @@ with tab_analyze:
 
     c1, c2 = st.columns(2)
     with c1:
-        sender = st.text_input("Sender email", "scammer@paypa1.com")
+        # A text box to type or paste the sender's email, and default value is admin@paypa1.com
+        sender = st.text_input("Sender email", "admin@paypa1.com")
     with c2:
+        # A text box for email subject, and default value: Urgent: Verify your account
         subject = st.text_input("Subject", "Urgent: Verify your account")
 
+# A big text area for user to input the message and default value.
     body = st.text_area(
         "Email body",
         height=200,
-        value="Hello, your account is locked. Click http://192.168.0.1 to verify now."
+        value="Hi Hana, your account is locked. Click http://192.168.0.1 to verify now."
     )
 
+#Main action button to analyze
     if st.button("Analyze"):
-        # Original classification
+
         label, score = classify_email(sender, subject, body)
 
         # Display result as you already do
@@ -59,8 +64,9 @@ with tab_analyze:
         k = keyword_check(subject, body)
         e = edit_distance_check(sender)
         u = suspicious_url_check(subject, body)
-        total = w + k + e + u  # should match 'score'
-
+        total = w + k + e + u  # should match the score
+        
+        #shows how scoring works
         st.markdown("**Scoring summary:**")
         st.caption(
             "- Domain not in legit list → +2\n"
@@ -70,7 +76,7 @@ with tab_analyze:
             "- Final: score ≥ 10 → Phishing"
         )
 
-        # NEW: human-readable breakdown showing where the number came from
+        # Shows how the score calculated
         st.markdown("**Score breakdown:**")
         st.caption(
             f"- Whitelist check: {w:+d}\n"
@@ -80,22 +86,25 @@ with tab_analyze:
             f"- **Total** = {total} (equals Suspicion Score)"
         )
 
+#Tab 2, manage rules and settings
 with tab_settings:
     st.subheader("Manage Rules (persisted to config.json)")
     st.info("Items are normalized to lowercase. Use domains like `example.com` (no http://).")
 
     # Legit domains (whitelist + reference brands combined)
     st.markdown("### ✅ Legit domains")
+
+    # Add new legit domain
     c1, c2 = st.columns([2, 1])
     with c1:
-        new_dom = st.text_input("Add domain", placeholder="e.g., ntu.edu.sg")
+        new_dom = st.text_input("Add domain", placeholder="e.g. sit.singaporetech.edu.sg")
     with c2:
         if st.button("Add domain"):
             if new_dom.strip():
                 LEGIT_DOMAINS.add(new_dom.strip().lower())
                 save_rules_to_config()
                 st.success(f"Added: {new_dom.strip().lower()}")
-
+    # Remove one or more legit domains
     if LEGIT_DOMAINS:
         to_remove = st.multiselect("Remove selected", sorted(LEGIT_DOMAINS))
         if st.button("Remove domain(s)"):
@@ -104,12 +113,13 @@ with tab_settings:
             save_rules_to_config()
             st.warning(f"Removed: {', '.join(to_remove) or 'None'}")
     else:
-        st.caption("No domains yet.")
+        st.caption("No domains yet.") #If the list is empty will show this
 
     st.divider()
 
-    # Suspicious keywords
+    #Title
     st.markdown("### 🚩 Suspicious keywords")
+    #add new suspicious keywords
     k1, k2 = st.columns([2, 1])
     with k1:
         new_kw = st.text_input("Add keyword", placeholder="e.g., urgent")
@@ -120,6 +130,7 @@ with tab_settings:
                 save_rules_to_config()
                 st.success(f"Added: {new_kw.strip().lower()}")
 
+    #remove one or more suspicious keywords
     if SUSPICIOUS_KEYWORDS:
         to_remove_k = st.multiselect("Remove keywords", sorted(SUSPICIOUS_KEYWORDS))
         if st.button("Remove keyword(s)"):
@@ -131,6 +142,8 @@ with tab_settings:
         st.caption("No keywords yet.")
 
     st.divider()
+
+    #Reset button bring everything back to default settings.
     if st.button("Reset to defaults"):
         reset_to_defaults()
         st.success("Settings reset to defaults.")
