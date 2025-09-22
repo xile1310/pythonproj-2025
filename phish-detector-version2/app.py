@@ -2,14 +2,20 @@
 #This code is for UI for this phishing detector
 
 import streamlit as st
-from rules import ( #import functions and variables from "rules.py"
+from rules import (
     classify_email,
     LEGIT_DOMAINS,
     SUSPICIOUS_KEYWORDS,
     load_config_to_rules,
     save_rules_to_config,
-    reset_to_defaults
+    reset_to_defaults,
+
+    whitelist_check,
+    keyword_check,
+    edit_distance_check,
+    suspicious_url_check,
 )
+
 
 st.set_page_config(page_title="Phishing Detector", #title show in the browser tab
                    page_icon="📧", #Small icon show in the browser tab
@@ -40,10 +46,21 @@ with tab_analyze:
     )
 
     if st.button("Analyze"):
+        # Original classification
         label, score = classify_email(sender, subject, body)
+
+        # Display result as you already do
         (st.error if label == "Phishing" else st.success)(
             f"Result: {label}  •  Suspicion Score: {score}"
         )
+
+        # NEW: compute per-rule contributions for a clear breakdown
+        w = whitelist_check(sender)
+        k = keyword_check(subject, body)
+        e = edit_distance_check(sender)
+        u = suspicious_url_check(subject, body)
+        total = w + k + e + u  # should match 'score'
+
         st.markdown("**Scoring summary:**")
         st.caption(
             "- Domain not in legit list → +2\n"
@@ -51,6 +68,16 @@ with tab_analyze:
             "- Lookalike of legit domain (edit distance ≤2) → +5\n"
             "- Suspicious URLs (IP / user@host / claimed-domain mismatch) → up to +5/+4\n"
             "- Final: score ≥ 10 → Phishing"
+        )
+
+        # NEW: human-readable breakdown showing where the number came from
+        st.markdown("**Score breakdown:**")
+        st.caption(
+            f"- Whitelist check: {w:+d}\n"
+            f"- Keyword checks: {k:+d}\n"
+            f"- Edit-distance (lookalike): {e:+d}\n"
+            f"- Suspicious URLs: {u:+d}\n"
+            f"- **Total** = {total} (equals Suspicion Score)"
         )
 
 with tab_settings:
