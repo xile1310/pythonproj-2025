@@ -1,6 +1,6 @@
 ﻿from typing import Dict  # Dict type hint
-from phishdetector.utils import parse_email_like_text  # parsing helpers
-from phishdetector.rules import run_all_rules  # rule runner
+from utils import parse_email_like_text  # parsing helpers
+from rules import run_all_rules  # rule runner
 
 def analyze_email_text(raw_text: str) -> Dict[str, object]:
     parsed = parse_email_like_text(raw_text)  # parse headers/body
