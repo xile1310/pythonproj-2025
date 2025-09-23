@@ -9,8 +9,8 @@ It classifies emails as **Safe** or **Phishing** based on configurable rules suc
 - Suspicious URL check → IP-based links, user@host links, claimed-domain mismatch
 
 Final classification:
-- Safe if score ≤ 4
-- Phishing if score > 4
+- Safe if score ≤ 10
+- Phishing if score > 10
 Rules and thresholds are customizable by config.json
 
 
