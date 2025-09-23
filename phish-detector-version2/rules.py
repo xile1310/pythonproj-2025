@@ -48,7 +48,7 @@ USER_AT_HOST_SCORE = 3
 CLAIMED_DOMAIN_MISMATCH_SCORE = 4
 
 # Final classification threshold (strictly greater than)
-PHISHING_THRESHOLD = 4
+PHISHING_THRESHOLD = 10
 
 # Precompiled URL regex
 URL_PATTERN = re.compile(r"http[s]?://\S+")
