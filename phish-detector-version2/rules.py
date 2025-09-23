@@ -1,19 +1,9 @@
 
 """
-Rule-based phishing detector (single-list design).
-- One list: LEGIT_DOMAINS (used for whitelist + edit-distance lookalikes)
-- Suspicious keywords with position scoring (subject heavier + early body bonus)
-- Suspicious URL checks (IP literal, user@host, claimed-domain mismatch)
-- Config stored in config.json; auto-created/migrated on first run
-
-Public API (unchanged):
-- classify_email(sender, subject, body) -> (label, score)
-- whitelist_check, keyword_check, edit_distance_check, suspicious_url_check
-- LEGIT_DOMAINS, SUSPICIOUS_KEYWORDS (alias SUS_KEYWORDS)
+This code contains rules that our phishing detector will be using
 """
 
 import os, json, re
-from typing import Dict, List, Tuple
 from urllib.parse import urlparse
 
 # This is the default configuration if json file not exist
@@ -26,46 +16,15 @@ CONFIG_PATH = "config.json"
 LEGIT_DOMAINS = set()
 SUS_KEYWORDS = set()
 
-# Backwards-compatibility: expose both names
-SUSPICIOUS_KEYWORDS = SUS_KEYWORDS
-
-# ---------- Constants (document rule weights/thresholds) ----------
-
-# Keyword scoring
-SUBJECT_KEYWORD_WEIGHT = 3
-BODY_KEYWORD_WEIGHT = 1
-EARLY_BODY_BONUS_WEIGHT = 2
-EARLY_BODY_WINDOW = 200
-
-# Lookalike / whitelist scoring
-LOOKALIKE_DISTANCE_MAX = 2
-EDIT_DISTANCE_SCORE = 5
-WHITELIST_MISS_SCORE = 2
-
-# URL heuristics
-IP_URL_SCORE = 5
-USER_AT_HOST_SCORE = 3
-CLAIMED_DOMAIN_MISMATCH_SCORE = 4
-
-# Final classification threshold (strictly greater than)
-PHISHING_THRESHOLD = 10
-
-# Precompiled URL regex
-URL_PATTERN = re.compile(r"http[s]?://\S+")
-
-# ---------- Config helpers (single source of truth) ----------
-
-def persist(path: str, cfg: Dict[str, List[str]]) -> None:
-    """Write configuration to disk (best-effort, no exceptions raised)."""
+#config helper functions
+def persist(path: str, cfg: dict) -> None:
     try:
         with open(path, "w", encoding="utf-8") as f:
             json.dump(cfg, f, indent=2, ensure_ascii=False)
     except Exception:
-        # Best-effort persistence; intentionally silent to avoid UI crashes
         pass
-
-def apply_cfg(cfg: Dict[str, List[str]]) -> None:
-    """Copy cfg values into module-level sets (lowercased)."""
+#take domain and keywords from config.json
+def apply_cfg(cfg: dict) -> None:
     LEGIT_DOMAINS.clear()
     LEGIT_DOMAINS.update({d.strip().lower() for d in cfg.get("legit_domains", []) if d.strip()})
     SUS_KEYWORDS.clear()
@@ -129,9 +88,9 @@ def levenshtein_distance(a: str, b: str) -> int:
             dp[i][j] = min(dp[i-1][j]+1, dp[i][j-1]+1, dp[i-1][j-1]+cost)
     return dp[la][lb]
 
-def extract_urls(text: str) -> List[str]:
+def extract_urls(text: str):
     """Return all http/https URLs in text."""
-    return URL_PATTERN.findall(text)
+    return re.findall(r"http[s]?://\S+", text)
 
 def url_domain(url: str) -> str:
     """
@@ -161,7 +120,7 @@ def domain_matches(host: str, root: str) -> bool:
 def whitelist_check(sender_email: str) -> int:
     """Small penalty if sender NOT in LEGIT_DOMAINS."""
     domain = sender_email.split("@")[-1].lower() if "@" in sender_email else ""
-    return 0 if domain in LEGIT_DOMAINS else WHITELIST_MISS_SCORE
+    return 0 if domain in LEGIT_DOMAINS else 2
 
 def keyword_check(subject: str, body: str) -> int:
     """
@@ -172,11 +131,11 @@ def keyword_check(subject: str, body: str) -> int:
     """
     s, b = subject.lower(), body.lower()
     score = 0
-    early = b[:EARLY_BODY_WINDOW]
+    early = b[:200]
     for kw in SUS_KEYWORDS:
-        if kw in s:      score += SUBJECT_KEYWORD_WEIGHT
-        if kw in b:      score += BODY_KEYWORD_WEIGHT
-        if kw in early:  score += EARLY_BODY_BONUS_WEIGHT
+        if kw in s:      score += 3
+        if kw in b:      score += 1
+        if kw in early:  score += 2
     return score
 
 def edit_distance_check(sender_email: str) -> int:
@@ -188,8 +147,8 @@ def edit_distance_check(sender_email: str) -> int:
     if not domain:
         return 0
     for legit in LEGIT_DOMAINS:
-        if domain != legit and levenshtein_distance(domain, legit) <= LOOKALIKE_DISTANCE_MAX:
-            return EDIT_DISTANCE_SCORE
+        if domain != legit and levenshtein_distance(domain, legit) <= 2:
+            return 5
     return 0
 
 def suspicious_url_check(subject: str, body: str) -> int:
@@ -212,29 +171,29 @@ def suspicious_url_check(subject: str, body: str) -> int:
         host = url_domain(url)
 
         if is_ip_literal(host):
-            score += IP_URL_SCORE
+            score += 5
         if "@" in url.split("://", 1)[-1].split("/", 1)[0]:
-            score += USER_AT_HOST_SCORE
+            score += 3
 
         # Claimed-domain mismatch heuristic
         for d in claimed:
             if not domain_matches(host, d):
-                score += CLAIMED_DOMAIN_MISMATCH_SCORE
+                score += 4
                 break
 
     return score
 
 # ---------- Final classifier ----------
 
-def classify_email(sender: str, subject: str, body: str) -> Tuple[str, int]:
+def classify_email(sender: str, subject: str, body: str):
     """
     Combine all rule scores.
-      Threshold: score > PHISHING_THRESHOLD -> "Phishing" else "Safe"
+      Threshold: score >= 10 -> "Phishing" else "Safe"
     """
     score  = whitelist_check(sender)
     score += keyword_check(subject, body)
     score += edit_distance_check(sender)
     score += suspicious_url_check(subject, body)
 
-    label = "Phishing" if score > PHISHING_THRESHOLD else "Safe"
+    label = "Phishing" if score > 10 else "Safe"
     return label, score
