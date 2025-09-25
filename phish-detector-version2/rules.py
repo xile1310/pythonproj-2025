@@ -75,9 +75,12 @@ def reset_to_defaults(path: str = CONFIG_PATH) -> None:
 load_config_to_rules()
 
 # ---------- Small helpers ----------
+# Methods used in main rules functions
 
 def levenshtein_distance(a: str, b: str) -> int:
-    """Classic edit distance (insert/delete/substitute = 1)."""
+# Used in edit_distance_check helper
+# Purpose is to determine whether is similar to legit domain
+# Returns the minimum number of edits needed
     la, lb = len(a), len(b)
     dp = [[0]*(lb+1) for _ in range(la+1)]
     for i in range(la+1): dp[i][0] = i
@@ -89,14 +92,19 @@ def levenshtein_distance(a: str, b: str) -> int:
     return dp[la][lb]
 
 def extract_urls(text: str):
-    """Return all http/https URLs in text."""
+# Used in suspicious_url_check function
+# Uses re.findall with pattern r"http[s]?://\S+": 
+# Captures every non-whitespace character after (http:// or https://) up to the next whitespace.
+
     return re.findall(r"http[s]?://\S+", text)
 
 def url_domain(url: str) -> str:
-    """
-    Extract host from URL (strip credentials/ports).
-    e.g., http://user:pass@host:8080/path -> host
-    """
+# Used in suspicious_url_check function
+# Purpose is to extract the domain from the URL
+# Domain is the value after the @ and Before the :
+# Split the netloc at @, take the last element
+# Split the netloc at :, take the first element
+
     try:
         netloc = urlparse(url).netloc
         if "@" in netloc:  # strip credentials
@@ -108,9 +116,14 @@ def url_domain(url: str) -> str:
         return ""
 
 def is_ip_literal(host: str) -> bool:
+# Used in suspicious_url_check function
+# Checks if the IP address is a bare IPv4 address (e.g., "192.168.0.1")
+# Pattern enforces the format, which is exactly four numeric groups separated by dots
     return bool(re.fullmatch(r"\d+\.\d+\.\d+\.\d+", host))
 
 def domain_matches(host: str, root: str) -> bool:
+# Used in suspicious_url_check function
+# Checks if host is the same as root or a subdomain of it
     """True if host == root or host ends with .root (subdomain)."""
     host, root = host.lower(), root.lower()
     return host == root or host.endswith("." + root)
@@ -118,20 +131,21 @@ def domain_matches(host: str, root: str) -> bool:
 # ---------- Individual rules (scored) ----------
 
 def whitelist_check(sender_email: str) -> int:
-    """Small penalty if sender NOT in LEGIT_DOMAINS."""
+    # Domain Extration and Check
+    # Extracts domain by splitting at "@", take last element
+    # if no @,returns empty string
     domain = sender_email.split("@")[-1].lower() if "@" in sender_email else ""
+     #compares it with value in LEGIT_DOMAINS to determine score
     return 0 if domain in LEGIT_DOMAINS else 2
 
+
 def keyword_check(subject: str, body: str) -> int:
-    """
-    Suspicious keyword scoring:
-      - +3 for each keyword in SUBJECT (higher weight)
-      - +1 for each keyword anywhere in BODY
-      - +2 EXTRA if keyword appears EARLY in BODY (first 200 chars)
-    """
+    # Dynamic Scoring system
+    # +3 in subject (s), +1 in body(s), +2 if in first 200 body characters(early)
     s, b = subject.lower(), body.lower()
     score = 0
     early = b[:200]
+    # Loops through the keywords(kw) in SUS_KEYWORDS and adds into "score"
     for kw in SUS_KEYWORDS:
         if kw in s:      score += 3
         if kw in b:      score += 1
@@ -139,48 +153,55 @@ def keyword_check(subject: str, body: str) -> int:
     return score
 
 def edit_distance_check(sender_email: str) -> int:
-    """
-    Lookalike domain detection:
-      +5 if sender domain is within distance ≤ 2 of any legit domain.
-    """
+    # Domain Lookalike Checker
+    # Extracts domain by splitting at "@", take last element
+    # if no @,returns empty string
     domain = sender_email.split("@")[-1].lower() if "@" in sender_email else ""
     if not domain:
         return 0
+    # Loops over values in LEGIT_DOMAINS
+    # If its not in LEGIT_DOMAINS, computes the Levenshtein distance.
+    # Grace area of 2 is given to prevent false positives
     for legit in LEGIT_DOMAINS:
         if domain != legit and levenshtein_distance(domain, legit) <= 2:
             return 5
     return 0
 
 def suspicious_url_check(subject: str, body: str) -> int:
-    """
-    Suspicious link detection:
-      - +5 for IP-literal links
-      - +3 for URLs containing user@host
-      - +4 if text mentions a legit domain but links go elsewhere (claimed-domain mismatch)
-    """
+
     score = 0
+    # Extract all http/https URLs from the email body text
+    # If no URLs are present, there is nothing to score
     urls = extract_urls(body)
     if not urls:
         return 0
 
-    # Find any "claimed" legit domain mentioned in subject/body
+
+    # Create a list of legit domains explicitly mentioned in the text (claimed brands)
     text = f"{subject}\n{body}".lower()
     claimed = [d for d in LEGIT_DOMAINS if d in text]
 
+    # Loops over each URL extracted
     for url in urls:
+        # Extract the hostname from the URL using helper function
         host = url_domain(url)
 
+        # Determine ip literal using helper function , socre based on 
+        # +5 if the URL’s host is a raw IPv4 address
+        # +3 if the URL contains user@host before the first slash
         if is_ip_literal(host):
             score += 5
         if "@" in url.split("://", 1)[-1].split("/", 1)[0]:
             score += 3
 
         # Claimed-domain mismatch heuristic
+        # If the domains mentioned in the text are not the same as the URL's host, score +4
         for d in claimed:
             if not domain_matches(host, d):
                 score += 4
                 break
 
+    # Return the total accumulated risk score for all URLs
     return score
 
 # ---------- Final classifier ----------

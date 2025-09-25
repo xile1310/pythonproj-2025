@@ -22,10 +22,11 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-1. Run the Web App
+## Installing Dependancies
 ```
 pip install -r requirements.txt
 ```
+1. Run the Web App
 ```
 streamlit run phish-detector-version2/app.py
 ```
@@ -33,6 +34,9 @@ streamlit run phish-detector-version2/app.py
 2. Evaluate on Dataset
 ```
 python3 evaluate.py --data-dir dataset --out results.csv
+```
+```
+python .\phish-detector-version2\evaluate.py --data-dir .\phish-detector-version2\dataset --out .\phish-detector-version2\results.csv
 ```
 ```yaml
   Example Output:
