@@ -11,7 +11,8 @@ DEFAULT_CONFIGURATION = {
     "legit_domains": ["singapore.tech.edu.sg","paypal.com","google.com"],
     "keywords": ["urgent", "verify", "account", "password", "click"],
 }
-CONFIG_PATH = "config.json"
+# Always keep config.json next to this module, regardless of CWD
+CONFIG_PATH = os.path.join(os.path.dirname(__file__), "config.json")
 
 LEGIT_DOMAINS = set()
 SUS_KEYWORDS = set()
@@ -124,7 +125,6 @@ def is_ip_literal(host: str) -> bool:
 def domain_matches(host: str, root: str) -> bool:
 # Used in suspicious_url_check function
 # Checks if host is the same as root or a subdomain of it
-    """True if host == root or host ends with .root (subdomain)."""
     host, root = host.lower(), root.lower()
     return host == root or host.endswith("." + root)
 
