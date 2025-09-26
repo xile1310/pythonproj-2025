@@ -1,19 +1,9 @@
 
 """
-Rule-based phishing detector (single-list design).
-- One list: LEGIT_DOMAINS (used for whitelist + edit-distance lookalikes)
-- Suspicious keywords with position scoring (subject heavier + early body bonus)
-- Suspicious URL checks (IP literal, user@host, claimed-domain mismatch)
-- Config stored in config.json; auto-created/migrated on first run
-
-Public API (unchanged):
-- classify_email(sender, subject, body) -> (label, score)
-- whitelist_check, keyword_check, edit_distance_check, suspicious_url_check
-- LEGIT_DOMAINS, SUSPICIOUS_KEYWORDS (alias SUS_KEYWORDS)
+This code contains rules that our phishing detector will be using
 """
 
 import os, json, re
-from typing import Dict, List, Tuple
 from urllib.parse import urlparse
 
 # This is the default configuration if json file not exist
@@ -21,51 +11,21 @@ DEFAULT_CONFIGURATION = {
     "legit_domains": ["singapore.tech.edu.sg","paypal.com","google.com"],
     "keywords": ["urgent", "verify", "account", "password", "click"],
 }
-CONFIG_PATH = "config.json"
+# Always keep config.json next to this module, regardless of CWD
+CONFIG_PATH = os.path.join(os.path.dirname(__file__), "config.json")
 
 LEGIT_DOMAINS = set()
 SUS_KEYWORDS = set()
 
-# Backwards-compatibility: expose both names
-SUSPICIOUS_KEYWORDS = SUS_KEYWORDS
-
-# ---------- Constants (document rule weights/thresholds) ----------
-
-# Keyword scoring
-SUBJECT_KEYWORD_WEIGHT = 3
-BODY_KEYWORD_WEIGHT = 1
-EARLY_BODY_BONUS_WEIGHT = 2
-EARLY_BODY_WINDOW = 200
-
-# Lookalike / whitelist scoring
-LOOKALIKE_DISTANCE_MAX = 2
-EDIT_DISTANCE_SCORE = 5
-WHITELIST_MISS_SCORE = 2
-
-# URL heuristics
-IP_URL_SCORE = 5
-USER_AT_HOST_SCORE = 3
-CLAIMED_DOMAIN_MISMATCH_SCORE = 4
-
-# Final classification threshold (strictly greater than)
-PHISHING_THRESHOLD = 4
-
-# Precompiled URL regex
-URL_PATTERN = re.compile(r"http[s]?://\S+")
-
-# ---------- Config helpers (single source of truth) ----------
-
-def persist(path: str, cfg: Dict[str, List[str]]) -> None:
-    """Write configuration to disk (best-effort, no exceptions raised)."""
+#config helper functions
+def persist(path: str, cfg: dict) -> None:
     try:
         with open(path, "w", encoding="utf-8") as f:
             json.dump(cfg, f, indent=2, ensure_ascii=False)
     except Exception:
-        # Best-effort persistence; intentionally silent to avoid UI crashes
         pass
-
-def apply_cfg(cfg: Dict[str, List[str]]) -> None:
-    """Copy cfg values into module-level sets (lowercased)."""
+#take domain and keywords from config.json
+def apply_cfg(cfg: dict) -> None:
     LEGIT_DOMAINS.clear()
     LEGIT_DOMAINS.update({d.strip().lower() for d in cfg.get("legit_domains", []) if d.strip()})
     SUS_KEYWORDS.clear()
@@ -116,9 +76,12 @@ def reset_to_defaults(path: str = CONFIG_PATH) -> None:
 load_config_to_rules()
 
 # ---------- Small helpers ----------
+# Methods used in main rules functions
 
 def levenshtein_distance(a: str, b: str) -> int:
-    """Classic edit distance (insert/delete/substitute = 1)."""
+# Used in edit_distance_check helper
+# Purpose is to determine whether is similar to legit domain
+# Returns the minimum number of edits needed
     la, lb = len(a), len(b)
     dp = [[0]*(lb+1) for _ in range(la+1)]
     for i in range(la+1): dp[i][0] = i
@@ -129,15 +92,20 @@ def levenshtein_distance(a: str, b: str) -> int:
             dp[i][j] = min(dp[i-1][j]+1, dp[i][j-1]+1, dp[i-1][j-1]+cost)
     return dp[la][lb]
 
-def extract_urls(text: str) -> List[str]:
-    """Return all http/https URLs in text."""
-    return URL_PATTERN.findall(text)
+def extract_urls(text: str):
+# Used in suspicious_url_check function
+# Uses re.findall with pattern r"http[s]?://\S+": 
+# Captures every non-whitespace character after (http:// or https://) up to the next whitespace.
+
+    return re.findall(r"http[s]?://\S+", text)
 
 def url_domain(url: str) -> str:
-    """
-    Extract host from URL (strip credentials/ports).
-    e.g., http://user:pass@host:8080/path -> host
-    """
+# Used in suspicious_url_check function
+# Purpose is to extract the domain from the URL
+# Domain is the value after the @ and Before the :
+# Split the netloc at @, take the last element
+# Split the netloc at :, take the first element
+
     try:
         netloc = urlparse(url).netloc
         if "@" in netloc:  # strip credentials
@@ -149,92 +117,104 @@ def url_domain(url: str) -> str:
         return ""
 
 def is_ip_literal(host: str) -> bool:
+# Used in suspicious_url_check function
+# Checks if the IP address is a bare IPv4 address (e.g., "192.168.0.1")
+# Pattern enforces the format, which is exactly four numeric groups separated by dots
     return bool(re.fullmatch(r"\d+\.\d+\.\d+\.\d+", host))
 
 def domain_matches(host: str, root: str) -> bool:
-    """True if host == root or host ends with .root (subdomain)."""
+# Used in suspicious_url_check function
+# Checks if host is the same as root or a subdomain of it
     host, root = host.lower(), root.lower()
     return host == root or host.endswith("." + root)
 
 # ---------- Individual rules (scored) ----------
 
 def whitelist_check(sender_email: str) -> int:
-    """Small penalty if sender NOT in LEGIT_DOMAINS."""
+    # Domain Extration and Check
+    # Extracts domain by splitting at "@", take last element
+    # if no @,returns empty string
     domain = sender_email.split("@")[-1].lower() if "@" in sender_email else ""
-    return 0 if domain in LEGIT_DOMAINS else WHITELIST_MISS_SCORE
+     #compares it with value in LEGIT_DOMAINS to determine score
+    return 0 if domain in LEGIT_DOMAINS else 2
+
 
 def keyword_check(subject: str, body: str) -> int:
-    """
-    Suspicious keyword scoring:
-      - +3 for each keyword in SUBJECT (higher weight)
-      - +1 for each keyword anywhere in BODY
-      - +2 EXTRA if keyword appears EARLY in BODY (first 200 chars)
-    """
+    # Dynamic Scoring system
+    # +3 in subject (s), +1 in body(s), +2 if in first 200 body characters(early)
     s, b = subject.lower(), body.lower()
     score = 0
-    early = b[:EARLY_BODY_WINDOW]
+    early = b[:200]
+    # Loops through the keywords(kw) in SUS_KEYWORDS and adds into "score"
     for kw in SUS_KEYWORDS:
-        if kw in s:      score += SUBJECT_KEYWORD_WEIGHT
-        if kw in b:      score += BODY_KEYWORD_WEIGHT
-        if kw in early:  score += EARLY_BODY_BONUS_WEIGHT
+        if kw in s:      score += 3
+        if kw in b:      score += 1
+        if kw in early:  score += 2
     return score
 
 def edit_distance_check(sender_email: str) -> int:
-    """
-    Lookalike domain detection:
-      +5 if sender domain is within distance ≤ 2 of any legit domain.
-    """
+    # Domain Lookalike Checker
+    # Extracts domain by splitting at "@", take last element
+    # if no @,returns empty string
     domain = sender_email.split("@")[-1].lower() if "@" in sender_email else ""
     if not domain:
         return 0
+    # Loops over values in LEGIT_DOMAINS
+    # If its not in LEGIT_DOMAINS, computes the Levenshtein distance.
+    # Grace area of 2 is given to prevent false positives
     for legit in LEGIT_DOMAINS:
-        if domain != legit and levenshtein_distance(domain, legit) <= LOOKALIKE_DISTANCE_MAX:
-            return EDIT_DISTANCE_SCORE
+        if domain != legit and levenshtein_distance(domain, legit) <= 2:
+            return 5
     return 0
 
 def suspicious_url_check(subject: str, body: str) -> int:
-    """
-    Suspicious link detection:
-      - +5 for IP-literal links
-      - +3 for URLs containing user@host
-      - +4 if text mentions a legit domain but links go elsewhere (claimed-domain mismatch)
-    """
+
     score = 0
+    # Extract all http/https URLs from the email body text
+    # If no URLs are present, there is nothing to score
     urls = extract_urls(body)
     if not urls:
         return 0
 
-    # Find any "claimed" legit domain mentioned in subject/body
+
+    # Create a list of legit domains explicitly mentioned in the text (claimed brands)
     text = f"{subject}\n{body}".lower()
     claimed = [d for d in LEGIT_DOMAINS if d in text]
 
+    # Loops over each URL extracted
     for url in urls:
+        # Extract the hostname from the URL using helper function
         host = url_domain(url)
 
+        # Determine ip literal using helper function , socre based on 
+        # +5 if the URL’s host is a raw IPv4 address
+        # +3 if the URL contains user@host before the first slash
         if is_ip_literal(host):
-            score += IP_URL_SCORE
+            score += 5
         if "@" in url.split("://", 1)[-1].split("/", 1)[0]:
-            score += USER_AT_HOST_SCORE
+            score += 3
 
         # Claimed-domain mismatch heuristic
+        # If the domains mentioned in the text are not the same as the URL's host, score +4
         for d in claimed:
             if not domain_matches(host, d):
-                score += CLAIMED_DOMAIN_MISMATCH_SCORE
+                score += 4
                 break
 
+    # Return the total accumulated risk score for all URLs
     return score
 
 # ---------- Final classifier ----------
 
-def classify_email(sender: str, subject: str, body: str) -> Tuple[str, int]:
+def classify_email(sender: str, subject: str, body: str):
     """
     Combine all rule scores.
-      Threshold: score > PHISHING_THRESHOLD -> "Phishing" else "Safe"
+      Threshold: score >= 10 -> "Phishing" else "Safe"
     """
     score  = whitelist_check(sender)
     score += keyword_check(subject, body)
     score += edit_distance_check(sender)
     score += suspicious_url_check(subject, body)
 
-    label = "Phishing" if score > PHISHING_THRESHOLD else "Safe"
+    label = "Phishing" if score > 10 else "Safe"
     return label, score

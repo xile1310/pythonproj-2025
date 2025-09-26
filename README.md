@@ -9,8 +9,8 @@ It classifies emails as **Safe** or **Phishing** based on configurable rules suc
 - Suspicious URL check → IP-based links, user@host links, claimed-domain mismatch
 
 Final classification:
-- Safe if score ≤ 4
-- Phishing if score > 4
+- Safe if score ≤ 10
+- Phishing if score > 10
 Rules and thresholds are customizable by config.json
 
 
@@ -22,10 +22,11 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-1. Run the Web App
+## Installing Dependancies
 ```
 pip install -r requirements.txt
 ```
+1. Run the Web App
 ```
 streamlit run phish-detector-version2/app.py
 ```
@@ -33,6 +34,9 @@ streamlit run phish-detector-version2/app.py
 2. Evaluate on Dataset
 ```
 python3 evaluate.py --data-dir dataset --out results.csv
+```
+```
+python .\phish-detector-version2\evaluate.py --data-dir .\phish-detector-version2\dataset --out .\phish-detector-version2\results.csv
 ```
 ```yaml
   Example Output:
