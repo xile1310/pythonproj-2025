@@ -1,14 +1,15 @@
 {
   "legit_domains": [
-    "google.com",
-    "redhat.com",
-    "sit.singaporetech.edu.sg"
+    "@google.com",
+    "@redhat.com",
+    "@sit.singaporetech.edu.sg"
   ],
   "keywords": [
     "account",
     "click",
     "password",
     "urgent",
-    "verify"
+    "verify",
+    "free"
   ]
 }
