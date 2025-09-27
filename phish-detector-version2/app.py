@@ -2,6 +2,7 @@
 #This code is for UI for this phishing detector
 
 import streamlit as st
+import re
 from rules import (
     classify_email,
     LEGIT_DOMAINS,
@@ -14,6 +15,30 @@ from rules import (
     edit_distance_check,
     suspicious_url_check,
 )
+
+# Validation functions
+def is_valid_email(email):
+    """Check if email has @ and . characters"""
+    return "@" in email and "." in email
+
+def validate_inputs(sender, subject, body):
+    """Validate all inputs and return validation results"""
+    errors = []
+    warnings = []
+    
+    # Sender email validation (required)
+    if not is_valid_email(sender):
+        errors.append("Sender email must contain '@' and '.'")
+    
+    # Subject validation (warning only)
+    if not subject.strip():
+        warnings.append("Subject field is empty")
+    
+    # Body validation (warning only)
+    if not body.strip():
+        warnings.append("Email body field is empty")
+    
+    return errors, warnings
 
 
 st.set_page_config(page_title="Phishing Detector", #title show in the browser tab
@@ -37,21 +62,36 @@ with tab_analyze:
     c1, c2 = st.columns(2)
     with c1:
         # A text box to type or paste the sender's email, and default value is admin@paypa1.com
-        sender = st.text_input("Sender email", "admin@paypa1.com")
+        sender = st.text_input("Sender email", "admin@paypa1.com", help="Must contain '@' and '.'")
     with c2:
         # A text box for email subject, and default value: Urgent: Verify your account
-        subject = st.text_input("Subject", "Urgent: Verify your account")
+        subject = st.text_input("Subject", "Urgent: Verify your account", help="Optional field")
 
 # A big text area for user to input the message and default value.
     body = st.text_area(
         "Email body",
         height=200,
-        value="Hi Hana, your account is locked. Click http://192.168.0.1 to verify now."
+        value="Hi Hana, your account is locked. Click http://192.168.0.1 to verify now.",
+        help="Optional field"
     )
 
 #Main action button to analyze
     if st.button("Analyze"):
-
+        # Validate inputs
+        errors, warnings = validate_inputs(sender, subject, body)
+        
+        # Show warnings (non-blocking)
+        if warnings:
+            for warning in warnings:
+                st.warning(f"⚠️ {warning}")
+        
+        # Show errors (blocking)
+        if errors:
+            for error in errors:
+                st.error(f"❌ {error}")
+            st.stop()  # Prevent analysis from proceeding
+        
+        # Proceed with analysis if no errors
         label, score = classify_email(sender, subject, body)
 
         # Display result as you already do

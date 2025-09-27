@@ -2,19 +2,21 @@
 A lightweight **rule-based phishing email detector** built with Streamlit.
 It classifies emails as **Safe** or **Phishing** based on configurable rules such as domain whitelists, suspicious keywords, edit distance checks, and URL heuristics.
 
-# How it works?
-- Domain check → penalty if sender not in whitelist
-- Keyword check → weighted score for suspicious keywords in subject/body
-- Edit distance check → catch lookalike domains (e.g., paypa1.com)
-- Suspicious URL check → IP-based links, user@host links, claimed-domain mismatch
+## How it works?
+The detector analyzes emails using four rule-based checks and assigns penalty points:
 
-Final classification:
-- Safe if score ≤ 10
-- Phishing if score > 10
+- **Domain check** → +2 points if sender not in whitelist
+- **Keyword check** → +3 points per keyword in subject, +1 point per keyword in body, +2 points if keyword appears early in body
+- **Edit distance check** → +5 points for lookalike domains (e.g., paypa1.com vs paypal.com)
+- **Suspicious URL check** → +5 points for IP-based links, +4 points for user@host links, +5 points for claimed-domain mismatch
 
-# Getting Started
+**Final classification:**
+- Safe if total score ≤ 10
+- Phishing if total score > 10
 
-## 🚀 Quick Setup (Recommended)
+# 🚀 Getting Started
+
+## Quick Setup (Recommended)
 
 Choose one of these automated setup options from the `scripts/` folder:
 
@@ -33,7 +35,7 @@ Choose one of these automated setup options from the `scripts/` folder:
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 
-## 📋 Manual Setup (Alternative)
+## Manual Setup (Alternative)
 
 ### Virtual Environment Setup
 A virtual environment is an isolated Python environment that allows you to:
@@ -64,17 +66,19 @@ If you encounter any installation issues, try upgrading pip first:
 python -m pip install --upgrade pip
 ```
 # Running the program
+- Please ensure the dependencies are all installed properly and your virual environment is activated (If you choose to use it)
 - If the scripts ran correctly, the web app should launch itself, if not you can run it manually by running this command in the terminal:
 ### 1: Run the Web App
-- Please ensure the dependencies are all installed properly and your virual environment is activated (If you choose to use it)
 ```
 streamlit run phish-detector-version2/app.py
 ```
 A new window will be launched in your browser.
 ### 2: Evaluate on Dataset
+- To evaluate large number of email files, upload the files into the dataset and run this command:
 ```
 python3 evaluate.py --data-dir dataset --out results.csv
 ```
+If the command does not work, use this command instead:
 ```
 python .\phish-detector-version2\evaluate.py --data-dir .\phish-detector-version2\dataset --out .\phish-detector-version2\results.csv
 ```
@@ -86,14 +90,16 @@ python .\phish-detector-version2\evaluate.py --data-dir .\phish-detector-version
   Confusion Matrix  TP=270  FP=18  FN=1127  TN=2783
 ```
 
-# Configuaration
-config.json stores your rules for whitelist domain and keywords.
-```json
-{
-  "legit_domains": ["google.com", "paypal.com", "redhat.com", "singapore.tech.edu.sg"],
-  "keywords": ["account", "click", "password", "urgent", "verify"]
-}
+# ⚙️ Configuration
 
-```
-# Dataset reference
-SpamAssassin Public Corpus” `https://www.kaggle.com/datasets/beatoa/spamassassin-public-corpus`
+`config.json` stores your customizable rules for whitelist domains and suspicious keywords.
+
+## Modify Settings
+- **Web Interface:** Use the "Settings" tab in the app (recommended)
+- **Direct Edit:** Edit `phish-detector-version2/config.json`
+
+
+## Tips
+- Add your company domains to `legit_domains`
+- Include common phishing words in `keywords`
+- Changes are saved automatically in web interface
