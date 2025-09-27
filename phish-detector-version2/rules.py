@@ -207,14 +207,13 @@ def suspicious_url_check(subject: str, body: str) -> int:
 # ---------- Final classifier ----------
 
 def classify_email(sender: str, subject: str, body: str):
-    """
-    Combine all rule scores.
-      Threshold: score >= 10 -> "Phishing" else "Safe"
-    """
-    score  = whitelist_check(sender)
-    score += keyword_check(subject, body)
-    score += edit_distance_check(sender)
-    score += suspicious_url_check(subject, body)
+    # Combine all rule scores.
+    # If score >= 10 -> "Phishing" else "Safe"
+
+    score  = whitelist_check(sender) # Checks if sender is on the whitelist
+    score += keyword_check(subject, body) # Add score from suspicious keywords
+    score += edit_distance_check(sender) # Add score if sender comes from a legit domain
+    score += suspicious_url_check(subject, body) # Add score from suspicious URLs in the email body
 
     label = "Phishing" if score > 10 else "Safe"
     return label, score
