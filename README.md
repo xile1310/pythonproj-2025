@@ -11,7 +11,6 @@ It classifies emails as **Safe** or **Phishing** based on configurable rules suc
 Final classification:
 - Safe if score ≤ 10
 - Phishing if score > 10
-Rules and thresholds are customizable by config.json
 
 # Getting Started
 
@@ -65,15 +64,14 @@ If you encounter any installation issues, try upgrading pip first:
 python -m pip install --upgrade pip
 ```
 # Running the program
-- Please ensure the dependencies are all installed properly and your virual environment is activated (If you choose to use it)
+- If the scripts ran correctly, the web app should launch itself, if not you can run it manually by running this command in the terminal:
 ### 1: Run the Web App
--Run this command in your terminal:
+- Please ensure the dependencies are all installed properly and your virual environment is activated (If you choose to use it)
 ```
 streamlit run phish-detector-version2/app.py
 ```
-A new window will be launched in your browser and rhe app will be available at http://localhost:8501
-
-2. Evaluate on Dataset
+A new window will be launched in your browser.
+### 2: Evaluate on Dataset
 ```
 python3 evaluate.py --data-dir dataset --out results.csv
 ```
