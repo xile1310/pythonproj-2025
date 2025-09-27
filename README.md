@@ -94,12 +94,15 @@ python .\phish-detector-version2\evaluate.py --data-dir .\phish-detector-version
 
 `config.json` stores your customizable rules for whitelist domains and suspicious keywords.
 
-## Modify Settings
-- **Web Interface:** Use the "Settings" tab in the app (recommended)
-- **Direct Edit:** Edit `phish-detector-version2/config.json`
+### Adding Domains/Keywords
+1. **Web Interface:** Type in the "Add domain" or "Add keyword" field and click the respective button
+2. **Direct Edit:** Add new entries to the arrays in `config.json`
 
+### Removing Domains/Keywords
+1. **Web Interface:** Select items from the "Remove selected" dropdown and click "Remove" button
+2. **Direct Edit:** Delete entries from the arrays in `config.json`
 
-## Tips
+### Tips
 - Add your company domains to `legit_domains`
 - Include common phishing words in `keywords`
 - Changes are saved automatically in web interface
