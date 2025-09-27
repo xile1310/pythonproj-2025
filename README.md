@@ -13,18 +13,40 @@ Final classification:
 - Phishing if score > 10
 Rules and thresholds are customizable by config.json
 
+# Getting Started
+## (Optional) Activating virtual environment
+- A virtual environment is an isolated Python environment that allows you to:
+Install packages specific to your project without affecting your system Python
+Avoid conflicts between different projects that might need different versions of the same package
 
-## Activating virtual environment
+### Step 1: Create a virtual environment
+- Run this command in your terminal
 ```
 python -m venv .venv
 ```
+### Step 2: Activating the virtual environment
+- You should see `(.venv)` in your terminal prompt upon running this command
 ```
 .\.venv\Scripts\Activate.ps1
 ```
 
-## Installing Dependancies
-```
+## Installing Dependencies
+
+Once your virtual environment is activated, install the required packages:
+
+```bash
 pip install -r requirements.txt
+```
+
+This will install:
+- **Streamlit 1.36.0** - Web framework for the phishing detector interface
+- **OpenPyXL 3.1.0+** - Library for reading/writing Excel files
+
+**Note:** Make sure your virtual environment is activated (you should see `(.venv)` in your terminal prompt) before running this command.
+
+If you encounter any installation issues, try upgrading pip first:
+```bash
+python -m pip install --upgrade pip
 ```
 1. Run the Web App
 ```
