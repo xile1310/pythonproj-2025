@@ -14,44 +14,64 @@ Final classification:
 Rules and thresholds are customizable by config.json
 
 # Getting Started
-## (Optional) Activating virtual environment
-- A virtual environment is an isolated Python environment that allows you to:
-Install packages specific to your project without affecting your system Python
-Avoid conflicts between different projects that might need different versions of the same package
 
-### Step 1: Create a virtual environment
-- Run this command in your terminal
+## 🚀 Quick Setup (Recommended)
+
+Choose one of these automated setup options from the `scripts/` folder:
+
+### Option 1: With Virtual Environment (Recommended)
+**Best for:** Most users, keeps your system clean
+- Double-click `scripts/setup-with-venv.ps1` in Windows Explorer, OR
+- Right-click `scripts/setup-with-venv.ps1` → "Run with PowerShell"
+
+### Option 2: Without Virtual Environment
+**Best for:** Users who prefer global installation
+- Double-click `scripts/setup-without-venv.ps1` in Windows Explorer, OR
+- Right-click `scripts/setup-without-venv.ps1` → "Run with PowerShell"
+
+**Note:** If PowerShell scripts are blocked, run this command first:
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
+
+## 📋 Manual Setup (Alternative)
+
+### Virtual Environment Setup
+A virtual environment is an isolated Python environment that allows you to:
+- Install packages specific to your project without affecting your system Python
+- Avoid conflicts between different projects that might need different versions of the same package
+
+#### Step 1: Create a virtual environment
+```bash
 python -m venv .venv
 ```
-### Step 2: Activating the virtual environment
-- You should see `(.venv)` in your terminal prompt upon running this command
-```
+
+#### Step 2: Activate the virtual environment
+```bash
 .\.venv\Scripts\Activate.ps1
 ```
 
-## Installing Dependencies
-
-Once your virtual environment is activated, install the required packages:
-
+#### Step 3: Install Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-This will install:
+**Dependencies installed:**
 - **Streamlit 1.36.0** - Web framework for the phishing detector interface
 - **OpenPyXL 3.1.0+** - Library for reading/writing Excel files
-
-**Note:** Make sure your virtual environment is activated (you should see `(.venv)` in your terminal prompt) before running this command.
 
 If you encounter any installation issues, try upgrading pip first:
 ```bash
 python -m pip install --upgrade pip
 ```
-1. Run the Web App
+# Running the program
+- Please ensure the dependencies are all installed properly and your virual environment is activated (If you choose to use it)
+### 1: Run the Web App
+-Run this command in your terminal:
 ```
 streamlit run phish-detector-version2/app.py
 ```
+A new window will be launched in your browser and rhe app will be available at http://localhost:8501
 
 2. Evaluate on Dataset
 ```
