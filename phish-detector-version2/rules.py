@@ -26,10 +26,12 @@ def persist(path: str, cfg: dict) -> None:
         pass
 #take domain and keywords from config.json
 def apply_cfg(cfg: dict) -> None:
+    # Clear existing legit domain set then replicate with clean values from configuration
     LEGIT_DOMAINS.clear()
-    LEGIT_DOMAINS.update({d.strip().lower() for d in cfg.get("legit_domains", []) if d.strip()})
-    SUS_KEYWORDS.clear()
-    SUS_KEYWORDS.update({k.strip().lower() for k in cfg.get("keywords", []) if k.strip()})
+    LEGIT_DOMAINS.update({d.strip().lower() for d in cfg.get("legit_domains", []) if d.strip()}) # remove spaces & lowercases
+    # Clear existing suspicious keyword set then replicate with clean values from configuration
+    SUS_KEYWORDS.clear()                                                                         # Get list from config 
+    SUS_KEYWORDS.update({k.strip().lower() for k in cfg.get("keywords", []) if k.strip()})       # Ignore empty strings 
 
 def load_config_to_rules(path: str = CONFIG_PATH) -> None:
     """
@@ -38,21 +40,28 @@ def load_config_to_rules(path: str = CONFIG_PATH) -> None:
     """
     if os.path.exists(path):
         try:
+            # Try to open and load exisiting connfig.json
             with open(path, "r", encoding="utf-8") as f:
                 cfg = json.load(f)
         except Exception:
+            # If reading fails, use the default configuration as fallback
             cfg = DEFAULT_CONFIGURATION.copy()
     else:
+        # If file does not exist, create a new one using default configuration
         cfg = DEFAULT_CONFIGURATION.copy()
         persist(path, cfg)
 
     # Migrate old schema → new (whitelist + brands → legit_domains)
     if "legit_domains" not in cfg:
+        # Get old keys "whitelist" and "brands", otherwise empty lists
         wl = cfg.get("whitelist", []) or []
         br = cfg.get("brands", []) or []
+        # Merge whitelist and brands into single sorted set named "legit_domains"
         cfg["legit_domains"] = sorted({*wl, *br})
+        # Remove old keys from config as they're not used 
         cfg.pop("whitelist", None)
         cfg.pop("brands", None)
+        # Apply configuration
         persist(path, cfg)
 
     cfg.setdefault("legit_domains", [])
@@ -62,14 +71,17 @@ def load_config_to_rules(path: str = CONFIG_PATH) -> None:
 def save_rules_to_config(path: str = CONFIG_PATH) -> None:
     """Persist current sets to config.json."""
     cfg = {
-        "legit_domains": sorted(LEGIT_DOMAINS),
-        "keywords": sorted(SUS_KEYWORDS),
+        "legit_domains": sorted(LEGIT_DOMAINS),  # Known legitimate domains
+        "keywords": sorted(SUS_KEYWORDS),        # Suspicious keywords
     }
+    # Save config file to disk
     persist(path, cfg)
 
 def reset_to_defaults(path: str = CONFIG_PATH) -> None:
     """Reset sets + config.json to DEFAULT_CONFIG."""
+    # Apply default configuration 
     apply_cfg(DEFAULT_CONFIGURATION)
+    # Save default configuration to disk
     persist(path, DEFAULT_CONFIGURATION)
 
 # Load config when module is imported
