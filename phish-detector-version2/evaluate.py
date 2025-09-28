@@ -86,14 +86,22 @@ def main():
             })
 
     # Confusion matrix (pos = phishing)
+    # Initialise all 4 variables to zero
+    # TP = True Positive, FP = False Positive
+    # FN = False Negative, TN = True Negative
     TP = FP = FN = TN = 0
+
+    # Loop over true(y_true) and predicted(y_pred) labels to populate confusion matrix
     for t, p in zip(y_true, y_pred):
         if   t==1 and p==1: TP+=1
         elif t==0 and p==1: FP+=1
         elif t==1 and p==0: FN+=1
         else:               TN+=1
 
+    # Calculate total number of samples
     total = TP+FP+FN+TN
+    # Calculate accuracy correct predictions / total samples
+    # If total is zero (to avoid division by zero), set accuracy to 0.
     accuracy  = (TP+TN)/total if total else 0.0
 
     print("\n=== Evaluation Report ===")
@@ -101,9 +109,11 @@ def main():
     print(f"Accuracy : {accuracy:.4f}")
     print(f"Confusion Matrix  TP={TP}  FP={FP}  FN={FN}  TN={TN}")
 
+    # If no output file is specified, exit here
     if not args.out:
         return
-
+    
+    # Prepare output file paths and summary statistics
     base, ext = os.path.splitext(args.out)
     ext = ext.lower()
     summary = {
@@ -111,33 +121,49 @@ def main():
         "accuracy": round(accuracy,4),
     }
 
+    # 1) Add results to excel
     if ext == ".xlsx":
         try:
             from openpyxl import Workbook
         except ImportError:
             print("[ERR] openpyxl not installed. Install with: pip install openpyxl")
             return
+        
+         # Create a new Excel workbook and add summary sheet
         wb = Workbook()
         ws = wb.active; ws.title = "summary"
+
+        # Add confusion metrix summary 
         ws.append(["metric","value"])
         for k,v in summary.items(): ws.append([k,v])
+
         # Each email on its own sheet
         for i, r in enumerate(rows, start=1):
             sh = wb.create_sheet(f"email_{i:04d}")
             sh.append(["field","value"])
             for k in ["path","true_label","pred_label","score","subject_preview"]:
                 sh.append([k, r[k]])
+
+        # Save excel
         wb.save(args.out)
         print(f"[OK] Excel written to: {args.out}  (summary + {len(rows)} email sheets)")
+
+    # 2) Add results to CSV    
     else:
         # CSV: predictions to <base>.csv and summary to <base>_summary.csv
         pred_csv = base + ".csv"
+        # Summary csv to <base>_summary.csv
         sum_csv  = base + "_summary.csv"
+
+        # Write predictions to CSV
         with open(pred_csv, "w", newline="", encoding="utf-8") as f:
+            # Use key from first row if avaialable, otherwise use default keys
             fieldnames = list(rows[0].keys()) if rows else \
                 ["path","true_label","pred_label","score","subject_preview"]
             w = csv.DictWriter(f, fieldnames=fieldnames)
             w.writeheader(); w.writerows(rows)
+            
+        # Write summary to CSV
         with open(sum_csv, "w", newline="", encoding="utf-8") as f:
             w = csv.DictWriter(f, fieldnames=list(summary.keys()))
             w.writeheader(); w.writerow(summary)
