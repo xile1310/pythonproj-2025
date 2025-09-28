@@ -93,10 +93,10 @@ def main():
 
     # Loop over true(y_true) and predicted(y_pred) labels to populate confusion matrix
     for t, p in zip(y_true, y_pred):
-        if   t==1 and p==1: TP+=1
-        elif t==0 and p==1: FP+=1
-        elif t==1 and p==0: FN+=1
-        else:               TN+=1
+        if   t==1 and p==1: TP+=1 # If model correctly predict phishing email as phishing, increase TP by 1 (true positive)
+        elif t==0 and p==1: FP+=1 # If model incorrectly predict ham email as phishing, increase FP by 1 (false positive)
+        elif t==1 and p==0: FN+=1 # If model incorrectly predict phishing email as ham, increase FN by 1 (false negative)
+        else:               TN+=1 # If model correctly predict ham email as ham, increase TN by 1 (true negative)
 
     # Calculate total number of samples
     total = TP+FP+FN+TN
@@ -105,28 +105,34 @@ def main():
     accuracy  = (TP+TN)/total if total else 0.0
 
     print("\n=== Evaluation Report ===")
-    print(f"Dataset: {args.data_dir}  |  Total: {total} (ham={TN+FP}, phish={TP+FN})")
-    print(f"Accuracy : {accuracy:.4f}")
-    print(f"Confusion Matrix  TP={TP}  FP={FP}  FN={FN}  TN={TN}")
+    print(f"Dataset: {args.data_dir}  |  Total: {total} (ham={TN+FP}, phish={TP+FN})") # Print dataset location, total number of samples, how many ham vs phishing
+    print(f"Accuracy : {accuracy:.4f}") # Print accuracy score (correct prediction/total), to 4 decimal places
+    print(f"Confusion Matrix  TP={TP}  FP={FP}  FN={FN}  TN={TN}") # Print full cnfusion matrix
 
     # If no output file is specified, exit here
     if not args.out:
         return
     
     # Prepare output file paths and summary statistics
+
+    # Split output file path into base and ext
     base, ext = os.path.splitext(args.out)
+
+    # Convert extension to lowercase for consistency
     ext = ext.lower()
+
+    # Create a summary dictionary with evaluation results
     summary = {
         "TP": TP, "FP": FP, "FN": FN, "TN": TN, "total": total,
-        "accuracy": round(accuracy,4),
+        "accuracy": round(accuracy,4), # Round accuracy to 4 decimal places
     }
 
     # 1) Add results to excel
     if ext == ".xlsx":
         try:
-            from openpyxl import Workbook
+            from openpyxl import Workbook # Try to import openpyxl for Excel 
         except ImportError:
-            print("[ERR] openpyxl not installed. Install with: pip install openpyxl")
+            print("[ERR] openpyxl not installed. Install with: pip install openpyxl") # If openpyxl is not installed, print error message and stop
             return
         
          # Create a new Excel workbook and add summary sheet
@@ -140,8 +146,8 @@ def main():
         # Each email on its own sheet
         for i, r in enumerate(rows, start=1):
             sh = wb.create_sheet(f"email_{i:04d}")
-            sh.append(["field","value"])
-            for k in ["path","true_label","pred_label","score","subject_preview"]:
+            sh.append(["field","value"]) # Add header row with column names
+            for k in ["path","true_label","pred_label","score","subject_preview"]: # Write selected fields from email record into the sheet
                 sh.append([k, r[k]])
 
         # Save excel
@@ -160,13 +166,13 @@ def main():
             # Use key from first row if avaialable, otherwise use default keys
             fieldnames = list(rows[0].keys()) if rows else \
                 ["path","true_label","pred_label","score","subject_preview"]
-            w = csv.DictWriter(f, fieldnames=fieldnames)
-            w.writeheader(); w.writerows(rows)
+            w = csv.DictWriter(f, fieldnames=fieldnames) # Create CSV writer
+            w.writeheader(); w.writerows(rows) # Write header row into CSV, followed by all rows of predictions
             
         # Write summary to CSV
         with open(sum_csv, "w", newline="", encoding="utf-8") as f:
             w = csv.DictWriter(f, fieldnames=list(summary.keys()))
-            w.writeheader(); w.writerow(summary)
+            w.writeheader(); w.writerow(summary) # Write header row and one row of results
         print(f"[OK] CSV written to: {pred_csv} and {sum_csv}")
 
 if __name__ == "__main__":
