@@ -17,7 +17,7 @@ from rules import (
 )
 
 # Validation functions
-def is_valid_email(email):
+def valid_email(email):
     """Check if email has @ and . characters"""
     return "@" in email and "." in email
 
@@ -27,7 +27,7 @@ def validate_inputs(sender, subject, body):
     warnings = []
     
     # Sender email validation (required)
-    if not is_valid_email(sender):
+    if not valid_email(sender):
         errors.append("Sender email must contain '@' and '.'")
     
     # Subject validation (warning only)
