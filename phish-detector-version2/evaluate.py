@@ -5,14 +5,26 @@ import os, argparse, csv
 from rules import classify_email, load_config_to_rules
 
 def read_text(p):
+        # Open the file at path in read mode r
+        # Encode text files using utf-8
+        # If invalid errors are found, replace them instead of raising an error
     with open(p, "r", encoding="utf-8", errors="replace") as f:
+        # Read the entire content of the file
+        # And return it as a string
         return f.read()
 
+
 def parse_email(raw):
+    # Split raw email text into sender, subject, body
     lines = raw.splitlines()
+    # Here we assume the first line is the subject
+    # If not set it to an empty string 
     subject = lines[0] if lines else ""
+    # Set sender to a placeholder since it's not extracted from raw text
     sender  = "unknown@example.com"
+    # Treat raw text as email body
     body    = raw
+    # Return sender, subject, and body
     return sender, subject, body
 
 def load_dataset(root):
