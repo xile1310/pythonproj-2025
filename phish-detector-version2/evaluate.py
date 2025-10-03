@@ -2,8 +2,7 @@
 # Minimal evaluate.py — accuracy + confusion matrix; optional Excel/CSV export
 
 import os, argparse, csv
-from rules import classify_email, load_config_to_rules
-
+import rules
 def read_text(p):
     """Read a text file as UTF-8, replacing invalid sequences.
 
@@ -98,7 +97,7 @@ def main():
     # Parse command-line arguments
     args = ap.parse_args()
     # Loads detection rules from configuration
-    load_config_to_rules()  # share config with the app
+    rules.load_config_to_rules()  # share config with the app
     # Load dataset emails & labels from given folder
     samples = load_dataset(args.data_dir)
     # Prepare lists to hold true labels, predicted labels, and output rows
@@ -106,7 +105,7 @@ def main():
     # Process every email sample
     for sender, subject, body, gold, path in samples:
         # Run the email using the classifier, then get prdicted label and score
-        label, score = classify_email(sender, subject, body)
+        label, score = rules.classify_email(sender, subject, body)
         # 0 = ham, 1= phishing
         y_true.append(gold)
         # Save predicted label as 1 if its "Phishing" otherwise label as 0
@@ -152,7 +151,9 @@ def main():
     # Prepare output file paths and summary statistics
 
     # Split output file path into base and ext
-    base, ext = os.path.splitext(args.out)
+    base, _ = os.path.splitext(args.out) # Get base and extension of output file path
+    args.out = base + ".xlsx"
+    ext = ".xlsx"
 
     # Convert extension to lowercase for consistency
     ext = ext.lower()
@@ -163,7 +164,7 @@ def main():
         "accuracy": round(accuracy,4), # Round accuracy to 4 decimal places
     }
 
-    # 1) Add results to excel
+    #Add results to excel
     if ext == ".xlsx":
         try:
             from openpyxl import Workbook # Try to import openpyxl for Excel 
@@ -179,37 +180,16 @@ def main():
         ws.append(["metric","value"])
         for k,v in summary.items(): ws.append([k,v])
 
-        # Each email on its own sheet
-        for i, r in enumerate(rows, start=1):
-            sh = wb.create_sheet(f"email_{i:04d}")
-            sh.append(["field","value"]) # Add header row with column names
-            for k in ["path","true_label","pred_label","score","subject_preview"]: # Write selected fields from email record into the sheet
-                sh.append([k, r[k]])
+        # Write all email predictions into a single sheet named "predictions"
+        ws_pred = wb.create_sheet("predictions")
+        headers = ["path", "true_label", "pred_label", "score", "subject_preview"] #headers for the prediction sheet
+        ws_pred.append(headers)
+        for r in rows:
+            ws_pred.append([r.get(h, "") for h in headers])
 
         # Save excel
         wb.save(args.out)
         print(f"[OK] Excel written to: {args.out}  (summary + {len(rows)} email sheets)")
-
-    # 2) Add results to CSV    
-    else:
-        # CSV: predictions to <base>.csv and summary to <base>_summary.csv
-        pred_csv = base + ".csv"
-        # Summary csv to <base>_summary.csv
-        sum_csv  = base + "_summary.csv"
-
-        # Write predictions to CSV
-        with open(pred_csv, "w", newline="", encoding="utf-8") as f:
-            # Use key from first row if avaialable, otherwise use default keys
-            fieldnames = list(rows[0].keys()) if rows else \
-                ["path","true_label","pred_label","score","subject_preview"]
-            w = csv.DictWriter(f, fieldnames=fieldnames) # Create CSV writer
-            w.writeheader(); w.writerows(rows) # Write header row into CSV, followed by all rows of predictions
-            
-        # Write summary to CSV
-        with open(sum_csv, "w", newline="", encoding="utf-8") as f:
-            w = csv.DictWriter(f, fieldnames=list(summary.keys()))
-            w.writeheader(); w.writerow(summary) # Write header row and one row of results
-        print(f"[OK] CSV written to: {pred_csv} and {sum_csv}")
 
 if __name__ == "__main__":
     main()
