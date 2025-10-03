@@ -189,7 +189,7 @@ def main():
 
         # Save excel
         wb.save(args.out)
-        print(f"[OK] Excel written to: {args.out}  (summary + {len(rows)} email sheets)")
+        print(f"[OK] Excel written to: {args.out}  (summary + predictions sheet {len(rows)} rows)")
 
 if __name__ == "__main__":
     main()
