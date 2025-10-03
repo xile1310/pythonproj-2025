@@ -60,6 +60,7 @@ pip install -r requirements.txt
 **Dependencies installed:**
 - **Streamlit 1.36.0** - Web framework for the phishing detector interface
 - **OpenPyXL 3.1.0+** - Library for reading/writing Excel files
+- **pytest 6.0.0+** - Testing framework for running automated tests
 
 If you encounter any installation issues, try upgrading pip first:
 ```bash
@@ -106,3 +107,32 @@ python .\phish-detector-version2\evaluate.py --data-dir .\phish-detector-version
 - Add your company domains to `legit_domains`
 - Include common phishing words in `keywords`
 - Changes are saved automatically in web interface
+
+# 🧪 Testing
+
+Run tests to verify the detector is working correctly:
+
+```bash
+# From phish-detector-version2 directory
+cd phish-detector-version2
+
+# Install pytest
+pip install pytest
+
+# Run tests
+cd test
+pytest -v
+
+# Or run directly
+python test_rules.py
+```
+
+**Tests include:**
+- Whitelist domain checking
+- Keyword detection and scoring
+- Lookalike domain detection
+- URL pattern detection  
+- Email classification
+- Error handling validation
+
+The web interface also includes a built-in testing feature in the "Help & Testing" tab.

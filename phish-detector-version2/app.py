@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-#This code is for UI for this phishing detector
 
 import streamlit as st
 import re
+import subprocess
+import sys
+import os
 from rules import (
     classify_email,
     LEGIT_DOMAINS,
@@ -18,11 +20,29 @@ from rules import (
 
 # Validation functions
 def valid_email(email):
-    """Check if email has @ and . characters"""
+    """Validate that an email contains both '@' and '.'.
+
+    Args:
+        email: Input email string.
+
+    Returns:
+        True if both characters are present, otherwise False.
+    """
     return "@" in email and "." in email
 
 def validate_inputs(sender, subject, body):
-    """Validate all inputs and return validation results"""
+    """Validate UI inputs for sender, subject, and body fields.
+
+    Args:
+        sender: Sender email address.
+        subject: Email subject text.
+        body: Email body text.
+
+    Returns:
+        Tuple (errors, warnings) where:
+          - errors is a list of blocking validation messages
+          - warnings is a list of non-blocking validation messages
+    """
     errors = []
     warnings = []
     
@@ -53,7 +73,7 @@ if "config_loaded" not in st.session_state:
     # mark config as already loaded
     st.session_state["config_loaded"] = True
 
-tab_analyze, tab_settings = st.tabs(["🔎 Analyze Email", "⚙️ Settings"]) #created 2 tabs analyze email and settings
+tab_analyze, tab_settings, tab_help = st.tabs(["🔎 Analyze Email", "⚙️ Settings", "❓ Help & Testing"]) #created 3 tabs
 
 #Tab 1 tab_analyze
 with tab_analyze:
@@ -187,3 +207,107 @@ with tab_settings:
     if st.button("Reset to defaults"):
         reset_to_defaults()
         st.success("Settings reset to defaults.")
+
+#Tab 3, help and testing
+with tab_help:
+    
+    # Help section
+    st.markdown("### 📖 How to Use")
+    
+    col_text, col_info = st.columns([2, 1])
+    with col_text:
+        st.markdown("""
+        This testing interface allows you to verify that all functionality is working correctly:
+        
+        **🧪 Testing Purpose:**
+        - Verify the phishing detection engine is functioning properly
+        - Test all core rules and scoring mechanisms
+        - Ensure configuration management works correctly
+        - Validate error handling and edge cases
+        
+        **Before analyzing real emails, use the test controls below to confirm everything is operational.**
+        """)
+    
+    with col_info:
+        st.info("💡 **Tip**: Run tests regularly to ensure the detector maintains accuracy over time.")
+    
+    st.markdown("### 🔧 Testing")
+    st.markdown("Run pytest tests to verify the detector is working correctly:")
+    
+    # Test running section - full width button
+    if st.button("🧪 Run All Tests", type="secondary", use_container_width=True):
+        with st.spinner("Running tests..."):
+            try:
+                # Change to test directory and run pytest
+                base_dir = os.path.dirname(os.path.abspath(__file__))
+                test_dir = os.path.join(base_dir, "test")
+                
+                # Run pytest command
+                result = subprocess.run(
+                    [sys.executable, "-m", "pytest", "test_rules.py", "-v"],
+                    cwd=test_dir,
+                    capture_output=True,
+                    text=True,
+                    timeout=30
+                )
+                
+                if result.returncode == 0:
+                    st.success("✅ All tests passed!")
+                    st.code(result.stdout)
+                else:
+                    st.error("❌ Test failures:")
+                    st.code(result.stdout)
+                    if result.stderr:
+                        st.code(result.stderr)
+                        
+            except subprocess.TimeoutExpired:
+                st.error("⏰ Tests timed out after 30 seconds")
+            except Exception as e:
+                st.error(f"❌ Error running tests: {str(e)}")
+                st.info("Make sure pytest is installed: `pip install pytest`")
+    
+    
+    # Installation help
+    st.markdown("### 💡 Troubleshooting")
+    with st.expander("Common Issues"):
+        st.markdown("""
+        **Tests not running?**
+        - Install pytest: `pip install pytest`
+        - Make sure you're in the project directory
+        
+        **Import errors?**
+        - Ensure you're running from the phish-detector-version2 directory
+        - Check that rules.py exists in the parent directory
+        
+        **Permission errors on Windows?**
+        - Run PowerShell as administrator
+        - Check execution policy settings
+        
+        **Configuration issues?**
+        - Use the Settings tab to reset to defaults
+        - Check that config.json has proper format
+        """)
+    
+    # Quick commands reference
+    st.markdown("### 🖥️ Command Line Reference") 
+    with st.expander("Commands for Terminal"):
+        st.code("""
+# Navigate to project directory
+cd phish-detector-version2
+
+# Install dependencies (including pytest)
+pip install -r requirements.txt
+
+# Run tests manually
+cd test
+pytest -v
+
+# Or run directly
+python test_rules.py
+
+# Run web app
+streamlit run app.py
+        """)
+    
+    st.markdown("---")
+    st.markdown("*This testing interface helps ensure the phishing detector is working correctly before analyzing real emails.*")

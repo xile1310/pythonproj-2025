@@ -5,6 +5,14 @@ import os, argparse, csv
 from rules import classify_email, load_config_to_rules
 
 def read_text(p):
+    """Read a text file as UTF-8, replacing invalid sequences.
+
+    Args:
+        p: Path to a text file.
+
+    Returns:
+        Full file contents as a single string.
+    """
         # Open the file at path in read mode r
         # Encode text files using utf-8
         # If invalid errors are found, replace them instead of raising an error
@@ -15,6 +23,16 @@ def read_text(p):
 
 
 def parse_email(raw):
+    """Parse naive email fields from raw text.
+
+    Splits lines to obtain a faux subject and sets a placeholder sender.
+
+    Args:
+        raw: Raw email text.
+
+    Returns:
+        Tuple (sender, subject, body).
+    """
     # Split raw email text into sender, subject, body
     lines = raw.splitlines()
     # Here we assume the first line is the subject
@@ -28,6 +46,19 @@ def parse_email(raw):
     return sender, subject, body
 
 def load_dataset(root):
+    """Load dataset samples from labeled folders.
+
+    Expects subdirectories: easy_ham/, hard_ham/, spam_2/.
+
+    Args:
+        root: Path to dataset directory.
+
+    Returns:
+        List of tuples (sender, subject, body, label, path).
+
+    Raises:
+        RuntimeError: If no samples are found under the root.
+    """
     # Create empty list to hold all sample emails
     # Each sample is a tuple of (sender, subject, body, label, path)
     samples = []  # (sender, subject, body, label, path)
@@ -52,6 +83,11 @@ def load_dataset(root):
     return samples
 
 def main():
+    """Evaluate the rule-based classifier and optionally export results.
+
+    Parses command-line options, loads rules and dataset, computes accuracy
+    and confusion matrix, and optionally writes detailed outputs to CSV/Excel.
+    """
     # Create argument parser for command-line options
     ap = argparse.ArgumentParser(description="Evaluate rule-based phishing detector.")
     # Add argument for dataset folder location
