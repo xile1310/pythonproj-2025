@@ -112,12 +112,26 @@ python .\phish-detector-version2\evaluate.py --data-dir .\phish-detector-version
 
 Run tests to verify the detector is working correctly:
 
+## 🌐 Web Interface Testing
+
+The web interface includes a built-in testing feature that allows you to run all tests directly from the browser:
+
+### Accessing the Testing Feature
+
+1. **Launch the web app:**
+   ```bash
+   streamlit run phish-detector-version2/app.py
+   ```
+
+2. **Navigate to the "Help & Testing" tab** in the web interface
+
+3. **Click "🧪 Run All Tests"** button to execute all 9 optimized tests
+
+### Command Line Testing
+
 ```bash
 # From phish-detector-version2 directory
 cd phish-detector-version2
-
-# Install pytest
-pip install pytest
 
 # Run tests
 cd test
@@ -135,4 +149,64 @@ python test_rules.py
 - Email classification
 - Error handling validation
 
-The web interface also includes a built-in testing feature in the "Help & Testing" tab.
+**💡 Pro Tip:** Run the web interface tests regularly to ensure the detector maintains accuracy over time!
+
+# 💡 Troubleshooting
+
+## 🚀 Application Launch Issues
+
+**Web app won't start:**
+- **Check Python version:** Ensure Python 3.8+ is installed
+  ```bash
+  python --version
+  ```
+- **Verify dependencies:** Install all required packages
+  ```bash
+  pip install -r requirements.txt
+  ```
+- **Check port availability:** Default port 8501 might be in use
+  ```bash
+  streamlit run phish-detector-version2/app.py --server.port 8502
+  ```
+- **Permission issues on Windows:** Run PowerShell as administrator
+
+**Import errors:**
+- **Missing modules:** Reinstall dependencies
+  ```bash
+  pip install --upgrade streamlit openpyxl pytest
+  ```
+- **Virtual environment:** Ensure you're in the correct environment
+  ```bash
+  .\.venv\Scripts\Activate.ps1  # Windows
+  source .venv/bin/activate     # Linux/Mac
+  ```
+
+## 📦 Dependency Version Issues
+
+**Required versions:**
+- **Streamlit:** 1.36.0 (web interface)
+- **OpenPyXL:** 3.1.0+ (Excel file handling)
+- **pytest:** 6.0.0+ (testing framework)
+- **Python:** 3.8+ (runtime)
+
+**Version conflicts:**
+```bash
+# Check installed versions
+pip list | findstr streamlit
+pip list | findstr openpyxl
+pip list | findstr pytest
+
+# Upgrade specific packages
+pip install --upgrade streamlit==1.36.0
+pip install --upgrade openpyxl>=3.1.0
+pip install --upgrade pytest>=6.0.0
+```
+
+**Clean installation:**
+```bash
+# Uninstall and reinstall
+pip uninstall streamlit openpyxl pytest
+pip install -r requirements.txt
+```
+
+

@@ -119,7 +119,7 @@ def levenshtein_distance(a: str, b: str) -> int:
     Returns:
         The minimum number of single-character edits to transform `a` into `b`.
     """
-# Used in edit_distance_check helper
+# Used in edit_distance_check function 
 # Purpose is to determine whether is similar to legit domain
 # Returns the minimum number of edits needed
     la, lb = len(a), len(b)
@@ -147,7 +147,7 @@ def extract_urls(text: str):
 
     return re.findall(r"http[s]?://\S+", text)
 
-def url_domain(url: str) -> str:
+def extract_domain(url: str) -> str:
     """Return the lowercase hostname component of a URL.
 
     Strips embedded credentials and port, if present.
@@ -159,8 +159,8 @@ def url_domain(url: str) -> str:
         Hostname (e.g., "example.com") or empty string on parse failure.
     """
 # Used in suspicious_url_check function
-# Purpose is to extract the domain from the URL
-# Domain is the value after the @ and Before the :
+# Purpose is to extract the hostname from the URL
+# Hostname is the value after the @ and Before the :
 
     try:
         netloc = urlparse(url).netloc
@@ -303,7 +303,7 @@ def suspicious_url_check(subject: str, body: str) -> int:
     # Loops over each URL extracted
     for url in urls:
         # Extract the hostname from the URL using helper function
-        host = url_domain(url)
+        host = extract_domain(url)
 
         # Determine ip literal using helper function , socre based on 
         # +5 if the URL’s host is a raw IPv4 address
