@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-# Minimal evaluate.py — accuracy + confusion matrix; optional Excel/CSV export
+# Minimal evaluate.py — accuracy + confusion matrix; optional Excel export
 
-import os, argparse, csv
+import os, argparse
 import rules
 def read_text(p):
     """Read a text file as UTF-8, replacing invalid sequences.
@@ -85,15 +85,15 @@ def main():
     """Evaluate the rule-based classifier and optionally export results.
 
     Parses command-line options, loads rules and dataset, computes accuracy
-    and confusion matrix, and optionally writes detailed outputs to CSV/Excel.
+    and confusion matrix, and optionally writes detailed outputs to Excel.
     """
     # Create argument parser for command-line options
     ap = argparse.ArgumentParser(description="Evaluate rule-based phishing detector.")
     # Add argument for dataset folder location
     # Default is "dataset"
     ap.add_argument("--data-dir", default="dataset", help="Folder with easy_ham/, hard_ham/, spam_2/")
-    # Add optional argument for output file (.xlsx or .csv)
-    ap.add_argument("--out", default="", help="Optional output (.xlsx or .csv).")
+    # Add optional argument for output file (.xlsx)
+    ap.add_argument("-out", default="", help="Optional output (.xlsx).")
     # Parse command-line arguments
     args = ap.parse_args()
     # Loads detection rules from configuration
