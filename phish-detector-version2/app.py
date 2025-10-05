@@ -160,10 +160,15 @@ with tab_settings:
         new_dom = st.text_input("Add domain", placeholder="e.g. sit.singaporetech.edu.sg")
     with c2:
         if st.button("Add domain"):
-            if new_dom.strip():
-                LEGIT_DOMAINS.add(new_dom.strip().lower())
+            cleaned = new_dom.strip()
+            if not cleaned:
+                st.error("Please enter a domain.")
+            elif "." not in cleaned:
+                st.error("Invalid domain. A domain must contain a '.' (e.g., example.com)")
+            else:
+                LEGIT_DOMAINS.add(cleaned.lower())
                 save_rules_to_config()
-                st.success(f"Added: {new_dom.strip().lower()}")
+                st.success(f"Added: {cleaned.lower()}")
     # Remove one or more legit domains
     if LEGIT_DOMAINS:
         to_remove = st.multiselect("Remove selected", sorted(LEGIT_DOMAINS))

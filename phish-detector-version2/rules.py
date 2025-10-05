@@ -3,105 +3,22 @@
 This code contains rules that our phishing detector will be using
 """
 
-import os, json, re
+import re
 from urllib.parse import urlparse
 
-# This is the default configuration if json file not exist
-DEFAULT_CONFIGURATION = {
-    "legit_domains": ["singapore.tech.edu.sg","paypal.com","google.com"],
-    "keywords": ["urgent", "verify", "account", "password", "click"],
-}
-# Always keep config.json next to this module, regardless of CWD
-CONFIG_PATH = os.path.join(os.path.dirname(__file__), "config.json")
+# Import config utilities and sets from dedicated module
+from config import (
+    DEFAULT_CONFIGURATION,
+    CONFIG_PATH,
+    LEGIT_DOMAINS,
+    SUS_KEYWORDS,
+    apply_cfg,
+    load_config_to_rules,
+    save_rules_to_config,
+    reset_to_defaults,
+)
 
-LEGIT_DOMAINS = set()
-SUS_KEYWORDS = set()
-
-#config helper functions
-def persist(path: str, cfg: dict) -> None:
-    """Write configuration to disk as JSON.
-
-    Args:
-        path: File path to write to (e.g., config.json).
-        cfg: Configuration dictionary to persist.
-
-    Notes:
-        Silently ignores I/O errors.
-    """
-    try:
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(cfg, f, indent=2, ensure_ascii=False)
-    except Exception:
-        pass
-#take domain and keywords from config.json
-def apply_cfg(cfg: dict) -> None:
-    """Apply configuration values into in-memory rule sets.
-
-    Populates `LEGIT_DOMAINS` and `SUS_KEYWORDS` from the provided
-    configuration dict, trimming whitespace and normalizing to lowercase.
-
-    Args:
-        cfg: Configuration with keys "legit_domains" and "keywords".
-    """
-    # Clear existing legit domain set then replicate with clean values from configuration
-    LEGIT_DOMAINS.clear()
-    LEGIT_DOMAINS.update({d.strip().lower() for d in cfg.get("legit_domains", []) if d.strip()}) # remove spaces & lowercases
-    # Clear existing suspicious keyword set then replicate with clean values from configuration
-    SUS_KEYWORDS.clear()                                                                         # Get list from config 
-    SUS_KEYWORDS.update({k.strip().lower() for k in cfg.get("keywords", []) if k.strip()})       # Ignore empty strings 
-
-def load_config_to_rules(path: str = CONFIG_PATH) -> None:
-    """
-    load config.json if it does not exist create a new one using DEFAULT_CONFIGURATION
-    else if is different format it will fix it.
-    """
-    if os.path.exists(path):
-        try:
-            # Try to open and load exisiting connfig.json
-            with open(path, "r", encoding="utf-8") as f:
-                cfg = json.load(f)
-        except Exception:
-            # If reading fails, use the default configuration as fallback
-            cfg = DEFAULT_CONFIGURATION.copy()
-    else:
-        # If file does not exist, create a new one using default configuration
-        cfg = DEFAULT_CONFIGURATION.copy()
-        persist(path, cfg)
-
-    # Migrate old schema → new (whitelist + brands → legit_domains)
-    if "legit_domains" not in cfg:
-        # Get old keys "whitelist" and "brands", otherwise empty lists
-        wl = cfg.get("whitelist", []) or []
-        br = cfg.get("brands", []) or []
-        # Merge whitelist and brands into single sorted set named "legit_domains"
-        cfg["legit_domains"] = sorted({*wl, *br})
-        # Remove old keys from config as they're not used 
-        cfg.pop("whitelist", None)
-        cfg.pop("brands", None)
-        # Apply configuration
-        persist(path, cfg)
-
-    cfg.setdefault("legit_domains", [])
-    cfg.setdefault("keywords", [])
-    apply_cfg(cfg)
-
-def save_rules_to_config(path: str = CONFIG_PATH) -> None:
-    """Persist current sets to config.json."""
-    cfg = {
-        "legit_domains": sorted(LEGIT_DOMAINS),  # Known legitimate domains
-        "keywords": sorted(SUS_KEYWORDS),        # Suspicious keywords
-    }
-    # Save config file to disk
-    persist(path, cfg)
-
-def reset_to_defaults(path: str = CONFIG_PATH) -> None:
-    """Reset sets + config.json to DEFAULT_CONFIG."""
-    # Apply default configuration 
-    apply_cfg(DEFAULT_CONFIGURATION)
-    # Save default configuration to disk
-    persist(path, DEFAULT_CONFIGURATION)
-
-# Load config when module is imported
+# Load config when module is imported (preserve original behavior)
 load_config_to_rules()
 
 # ---------- Small helpers ----------
