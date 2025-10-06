@@ -8,7 +8,7 @@ The detector analyzes emails using four rule-based checks and assigns penalty po
 - **Domain check** → +2 points if sender not in whitelist
 - **Keyword check** → +3 points per keyword in subject, +1 point per keyword in body, +2 points if keyword appears early in body
 - **Edit distance check** → +5 points for lookalike domains (e.g., paypa1.com vs paypal.com)
-- **Suspicious URL check** → +5 points for IP-based links, +4 points for user@host links, +5 points for claimed-domain mismatch
+- **Suspicious URL check** → +5 points for IP-based links, +3 points for user@host links, +4 points for claimed-domain mismatch
 
 **Final classification:**
 - Safe if total score ≤ 10
@@ -125,7 +125,7 @@ The web interface includes a built-in testing feature that allows you to run all
 
 2. **Navigate to the "Help & Testing" tab** in the web interface
 
-3. **Click "🧪 Run All Tests"** button to execute all 9 optimized tests
+3. **Click "🧪 Run All Tests"** button to execute the test suite
 
 ### Command Line Testing
 
@@ -147,7 +147,6 @@ python test_rules.py
 - Lookalike domain detection
 - URL pattern detection  
 - Email classification
-- Error handling validation
 
 **💡 Pro Tip:** Run the web interface tests regularly to ensure the detector maintains accuracy over time!
 
