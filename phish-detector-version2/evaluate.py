@@ -37,8 +37,8 @@ def parse_email(raw):
     # Here we assume the first line is the subject
     # If not set it to an empty string 
     subject = lines[0] if lines else ""
-    # Set sender to a placeholder since it's not extracted from raw text
-    sender  = "unknown@example.com"
+    # Try to extract sender from a From: header; fallback to placeholder
+    sender  = next((ln.split(":",1)[1].strip().split()[-1].strip("<>\"')(") for ln in lines if ln.lower().startswith("from:") and "@" in ln), "unknown@example.com")
     # Treat raw text as email body
     body    = raw
     # Return sender, subject, and body

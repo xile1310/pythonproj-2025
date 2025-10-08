@@ -77,11 +77,8 @@ A new window will be launched in your browser.
 ### 2: Evaluate on Dataset
 - To evaluate large number of email files, upload the files into the dataset and run this command:
 ```
-python3 evaluate.py --data-dir dataset --out results.csv
-```
-If the command does not work, use this command instead:
-```
-python .\phish-detector-version2\evaluate.py --data-dir .\phish-detector-version2\dataset --out .\phish-detector-version2\results.csv
+cd .\phish-detector-version2
+python .\evaluate.py --data-dir .\dataset -out .\results.xlsx
 ```
 ```yaml
   Example Output:

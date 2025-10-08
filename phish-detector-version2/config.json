@@ -1,15 +1,14 @@
 {
   "legit_domains": [
-    "google.com",
-    "paypal.com",
     "singapore.tech.edu.sg",
-    "test.com"
+    "paypal.com",
+    "google.com"
   ],
   "keywords": [
-    "account",
-    "click",
-    "password",
     "urgent",
-    "verify"
+    "verify",
+    "account",
+    "password",
+    "click"
   ]
 }

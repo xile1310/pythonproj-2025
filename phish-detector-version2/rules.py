@@ -215,6 +215,11 @@ def suspicious_url_check(subject: str, body: str) -> int:
 
     # Create a list of legit domains explicitly mentioned in the text (claimed brands)
     text = f"{subject}\n{body}".lower()
+    # Minimal normalization so brand-root mentions (e.g., "paypal") count for "paypal.com"
+    for _d in LEGIT_DOMAINS:
+        _root = _d.split('.', 1)[0]
+        if _root and (_root in text) and (_d not in text):
+            text += f" {_d}"
     claimed = [d for d in LEGIT_DOMAINS if d in text]
 
     # Loops over each URL extracted
