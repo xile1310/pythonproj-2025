@@ -2,6 +2,8 @@
 # Minimal evaluate.py — accuracy + confusion matrix; optional Excel export
 
 import os, argparse
+from email.parser import BytesParser
+from email.message import EmailMessage
 import rules
 def read_text(p):
     """Read a text file as UTF-8, replacing invalid sequences.
@@ -22,9 +24,10 @@ def read_text(p):
 
 
 def parse_email(raw):
-    """Parse naive email fields from raw text.
+    """Parse email fields using BytesParser for improved accuracy.
 
-    Splits lines to obtain a faux subject and sets a placeholder sender.
+    Uses Python's email.parser.BytesParser to properly parse email headers
+    and extract sender, subject, and body content.
 
     Args:
         raw: Raw email text.
@@ -32,17 +35,60 @@ def parse_email(raw):
     Returns:
         Tuple (sender, subject, body).
     """
-    # Split raw email text into sender, subject, body
-    lines = raw.splitlines()
-    # Here we assume the first line is the subject
-    # If not set it to an empty string 
-    subject = lines[0] if lines else ""
-    # Try to extract sender from a From: header; fallback to placeholder
-    sender  = next((ln.split(":",1)[1].strip().split()[-1].strip("<>\"')(") for ln in lines if ln.lower().startswith("from:") and "@" in ln), "unknown@example.com")
-    # Treat raw text as email body
-    body    = raw
-    # Return sender, subject, and body
-    return sender, subject, body
+    try:
+        # Convert string to bytes for BytesParser
+        raw_bytes = raw.encode('utf-8', errors='replace')
+        
+        # Parse email using BytesParser
+        parser = BytesParser()
+        msg = parser.parsebytes(raw_bytes)
+        
+        # Extract sender from From header
+        sender = "unknown@example.com"  # default fallback
+        if 'From' in msg:
+            from_header = msg['From']
+            if from_header:
+                # Extract email address from "Name <email@domain.com>" format
+                if '<' in from_header and '>' in from_header:
+                    # Extract email from angle brackets
+                    start = from_header.find('<') + 1
+                    end = from_header.find('>')
+                    sender = from_header[start:end].strip()
+                elif '@' in from_header:
+                    # If no angle brackets, use the whole string if it contains @
+                    sender = from_header.strip()
+        
+        # Extract subject
+        subject = msg.get('Subject', '').strip() if msg.get('Subject') else ""
+        
+        # Extract body content
+        body = ""
+        if msg.is_multipart():
+            # Handle multipart messages
+            for part in msg.walk():
+                if part.get_content_type() == "text/plain":
+                    payload = part.get_payload(decode=True)
+                    if payload:
+                        body += payload.decode('utf-8', errors='replace')
+        else:
+            # Handle single part messages
+            payload = msg.get_payload(decode=True)
+            if payload:
+                body = payload.decode('utf-8', errors='replace')
+        
+        # If no body found, use the raw content as fallback
+        if not body.strip():
+            body = raw
+        
+        return sender, subject, body
+        
+    except Exception as e:
+        # Fallback to original parsing if BytesParser fails
+        lines = raw.splitlines()
+        subject = lines[0] if lines else ""
+        sender = next((ln.split(":",1)[1].strip().split()[-1].strip("<>\"')(") for ln in lines if ln.lower().startswith("from:") and "@" in ln), "unknown@example.com")
+        body = raw
+        return sender, subject, body
 
 def load_dataset(root):
     """Load dataset samples from labeled folders.
