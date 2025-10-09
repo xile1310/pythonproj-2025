@@ -1,14 +1,29 @@
 {
   "legit_domains": [
-    "singapore.tech.edu.sg",
+    "singaporetech.edu.sg",
+    "ntu.edu.sg",
+    "nyp.edu.sg",
+    "rp.edu.sg",
+    "sit.edu.sg",
     "paypal.com",
-    "google.com"
+    "google.com",
+    "microsoft.com",
+    "cnet.com",
+    "eff.org",
+    "linux.org"
   ],
   "keywords": [
     "urgent",
     "verify",
     "account",
     "password",
-    "click"
+    "click",
+    "confirm",
+    "update",
+    "security",
+    "bank",
+    "login",
+    "suspended",
+    "restricted"
   ]
 }
