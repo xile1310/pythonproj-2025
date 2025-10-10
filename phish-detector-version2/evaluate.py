@@ -91,41 +91,42 @@ def parse_email(raw):
         return sender, subject, body
 
 def load_dataset(root):
-    """Load dataset samples from labeled folders.
-
-    Expects subdirectories: easy_ham/, hard_ham/, spam_2/.
-
-    Args:
-        root: Path to dataset directory.
-
-    Returns:
-        List of tuples (sender, subject, body, label, path).
-
-    Raises:
-        RuntimeError: If no samples are found under the root.
-    """
-    # Create empty list to hold all sample emails
-    # Each sample is a tuple of (sender, subject, body, label, path)
     samples = []  # (sender, subject, body, label, path)
-    # Loop over dataset folders and assign them labels
-    # "easy_ham" and "hard_ham" are labeled as 0 (ham)
-    # "spam_2" is labeled as 1 (phishing)
-    for d, lab in (("easy_ham",0), ("hard_ham",0), ("spam_2",1)):
-        folder = os.path.join(root, d) # path to the folder
-        if not os.path.isdir(folder): continue # skip this is the folder does not exist
-        #Iterate over all files in the folder
-        for fn in os.listdir(folder):
-            fp = os.path.join(folder, fn) # Full file path
-            if not os.path.isfile(fp): continue #Skip it if it's not a file
-            # Read email file and parse it into sender, subject, and body
-            s, sub, b = parse_email(read_text(fp))
-            # Append parsed email with its label and file path
-            samples.append((s, sub, b, lab, fp))
-            # If no emails found in the folder, raise an error
+    
+    # Define possible folder structures
+    dataset_structures = [
+        # Original dataset structure (dataset)
+        [("easy_ham", 0), ("hard_ham", 0), ("spam_2", 1)],
+        # dataset2 and dataset3 structure
+        [("ham", 0), ("spam", 1)]
+    ]
+    
+    # Try each dataset structure
+    for structure in dataset_structures:
+        has_valid_folders = False
+        for d, lab in structure:
+            folder = os.path.join(root, d)
+            if os.path.isdir(folder):
+                has_valid_folders = True
+                for fn in os.listdir(folder):
+                    fp = os.path.join(folder, fn)
+                    if not os.path.isfile(fp):
+                        continue
+                    s, sub, b = parse_email(read_text(fp))
+                    samples.append((s, sub, b, lab, fp))
+        
+        # If we found valid folders in this structure, we can stop checking
+        if has_valid_folders:
+            break
+    
+    # If no samples were found at all, raise an error
     if not samples:
-        raise RuntimeError(f"No emails found under '{root}'. Expected easy_ham/, hard_ham/, spam_2/")
+        raise RuntimeError(f"No emails found under '{root}'. Expected either:\n"
+                         f"1. easy_ham/, hard_ham/, spam_2/ (dataset)\n"
+                         f"2. ham/, spam/ (dataset2 or dataset3)")
     # Return the list of samples
     return samples
+
 
 def main():
     """Evaluate the rule-based classifier and optionally export results.
