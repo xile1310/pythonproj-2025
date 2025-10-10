@@ -4,7 +4,7 @@
 import os, argparse
 from email.parser import BytesParser
 from email.message import EmailMessage
-import rules
+import newrules
 def read_text(p):
     """Read a text file as UTF-8, replacing invalid sequences.
 
@@ -131,7 +131,7 @@ def load_dataset(root):
 def main():
     """Evaluate the rule-based classifier and optionally export results.
 
-    Parses command-line options, loads rules and dataset, computes accuracy
+    Parses command-line options, loads newrules and dataset, computes accuracy
     and confusion matrix, and optionally writes detailed outputs to Excel.
     """
     # Create argument parser for command-line options
@@ -144,7 +144,7 @@ def main():
     # Parse command-line arguments
     args = ap.parse_args()
     # Loads detection rules from configuration
-    rules.load_config_to_rules()  # share config with the app
+    newrules.load_config_to_rules()  # share config with the app
     # Load dataset emails & labels from given folder
     samples = load_dataset(args.data_dir)
     # Prepare lists to hold true labels, predicted labels, and output rows
@@ -152,7 +152,7 @@ def main():
     # Process every email sample
     for sender, subject, body, gold, path in samples:
         # Run the email using the classifier, then get prdicted label and score
-        label, score = rules.classify_email(sender, subject, body)
+        label, score = newrules.classify_email(sender, subject, body)
         # 0 = ham, 1= phishing
         y_true.append(gold)
         # Save predicted label as 1 if its "Phishing" otherwise label as 0
