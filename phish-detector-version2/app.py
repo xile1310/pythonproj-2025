@@ -12,7 +12,7 @@ from newrules import (
     keyword_check,
     edit_distance_check,
 )
-#import from config.json
+#import from config.py
 from config import (
     CONFIG,
     load_config_to_rules,
