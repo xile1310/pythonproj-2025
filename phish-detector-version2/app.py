@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 
+#import libraries
 import streamlit as st
-import re
 import subprocess
 import sys
 import os
+#import from newrules.py
 from newrules import (
     classify_email,
     whitelist_check,
     keyword_check,
     edit_distance_check,
 )
+#import from config.json
 from config import (
     CONFIG,
     load_config_to_rules,
@@ -20,33 +22,34 @@ from config import (
 
 # Validation functions
 def valid_email(email):
-    """Validate that email contains both '@' and '.' characters."""
+    #Validate that email contains both '@' and '.' characters.
     return "@" in email and "." in email
 
 def validate_inputs(sender, subject, body):
-    """Validate UI inputs for sender, subject, and body fields."""
+    #Validate UI inputs for sender, subject, and body fields.
     errors = []
     warnings = []
     
-    # Sender email validation (required)
+    # Sender email validation: required
     if not valid_email(sender):
         errors.append("Sender email must contain '@' and '.'")
     
-    # Subject validation (warning only)
+    # Subject validatio: warning only
     if not subject.strip():
         warnings.append("Subject field is empty")
     
-    # Body validation (warning only)
+    # Body validation: warning only
     if not body.strip():
         warnings.append("Email body field is empty")
     
     return errors, warnings
 
 def highlight_keywords_in_fields(sender, subject, body):
-    """Show highlighted keywords in a separate display area."""
+    #Show highlighted keywords in a separate display area.
     # Get keywords from config
     keywords = CONFIG.get("keywords", [])
-    
+
+    #If there is no keywords, nothing to highlight
     if not keywords:
         return
     
@@ -66,7 +69,7 @@ def highlight_keywords_in_fields(sender, subject, body):
             st.markdown("**Subject:**")
             st.markdown(highlighted_subject, unsafe_allow_html=True)
         
-        # Show highlighted body
+        # highlighted body if the user got type any
         if body:
             highlighted_body = highlight_text(body, found_keywords)
             st.markdown("**Body:**")
@@ -74,7 +77,7 @@ def highlight_keywords_in_fields(sender, subject, body):
 
 def highlight_text(text, keywords):
     """Highlight keywords in text with red background."""
-    import re
+    import re #local import here
     
     highlighted_text = text
     for keyword in keywords:
@@ -282,7 +285,7 @@ with tab_help:
                 base_dir = os.path.dirname(os.path.abspath(__file__))
                 test_dir = os.path.join(base_dir, "test")
                 
-                # Run pytest command
+                # is to Run the pytest command
                 result = subprocess.run(
                     [sys.executable, "-m", "pytest", "test_rules.py", "-v"],
                     cwd=test_dir,
