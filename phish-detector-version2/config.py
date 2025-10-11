@@ -104,9 +104,12 @@ def load_config_to_rules(path: str = CONFIG_PATH) -> None:
 
 def save_rules_to_config(path: str = CONFIG_PATH) -> None:
     """Save current rule sets to config.json."""
+    # Save from CONFIG dict (which the web app modifies), not from legacy sets
     cfg = {
-        "legit_domains": sorted(LEGIT_DOMAINS),
-        "keywords": sorted(SUS_KEYWORDS),
+        "legit_domains": sorted(CONFIG.get("legit_domains", [])),
+        "keywords": sorted(CONFIG.get("keywords", [])),
+        "safe_terms": sorted(CONFIG.get("safe_terms", [])),
+        "thresholds": CONFIG.get("thresholds", {})
     }
     persist(path, cfg)
 
