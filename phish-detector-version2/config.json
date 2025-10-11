@@ -12,6 +12,7 @@
     "eff.org",
     "linux.org"
   ],
+
   "keywords": [
     "urgent",
     "verify",
@@ -24,6 +25,29 @@
     "bank",
     "login",
     "suspended",
-    "restricted"
-  ]
+    "restricted",
+    "verify your account",
+    "verify your identity",
+    "reset your password",
+    "confirm your identity",
+    "confirm your account",
+    "update your information",
+    "unusual activity",
+    "security alert",
+    "suspended account",
+    "account locked",
+    "expired session",
+    "validate your credentials",
+    "update payment",
+    "billing problem",
+    "login to your account",
+    "click here to"
+  ],
+  "thresholds": {
+    "phish_score": 1.5,
+    "keyword_weight": 1.0,
+    "url_weight": 0.8,
+    "safe_downweight": 0.9,
+    "max_levenshtein_distance": 2
+  }
 }

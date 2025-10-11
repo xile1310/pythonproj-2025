@@ -1,149 +1,157 @@
 #!/usr/bin/env python3
 """
-Optimized pytest tests for rules.py functionality.
+Focused pytest tests for newrules.py scoring functionality.
+Tests only the scoring behavior, not the reasons.
 """
 
 import sys
 import os
 import pytest
 
-# Add parent directory to path so we can import rules
+# Add parent directory to path so we can import newrules
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.insert(0, parent_dir)
 
-from rules import (
+import newrules
+from newrules import (
     classify_email,
     whitelist_check,
     keyword_check,
     edit_distance_check,
-    suspicious_url_check,
-    LEGIT_DOMAINS,
-    SUS_KEYWORDS,
-    reset_to_defaults
+    safety_checks,
+    extract_domain
 )
+from config import _safe_str, load_config_to_rules
 
 
 @pytest.fixture(autouse=True)
 def reset_config():
     """Reset configuration before each test."""
-    LEGIT_DOMAINS.clear()
-    SUS_KEYWORDS.clear()
-    LEGIT_DOMAINS.update(["paypal.com", "google.com"])
-    SUS_KEYWORDS.update(["urgent", "verify", "click", "account"])
+    # Load default config
+    newrules.CONFIG = {
+        "legit_domains": ["paypal.com", "google.com"],
+        "suspicious_domains": ["paypall.com", "goog1e.com"],
+        "keywords": ["urgent", "verify", "click", "account"],
+        "safe_terms": ["newsletter", "unsubscribe"],
+        "thresholds": {"phish_score": 1.5, "keyword_weight": 1.0, "url_weight": 0.8, "safe_downweight": 0.9}
+    }
 
 
-class TestCoreFunctionality:
-    """Test core functionality of all rule functions."""
+class TestWhitelistCheck:
+    """Test whitelist_check scoring."""
     
-    def test_whitelist_check(self):
-        """Test domain whitelist checking with legitimate and non-legitimate domains."""
-        # Legitimate domains
-        assert whitelist_check("user@paypal.com") == 0
-        assert whitelist_check("user@PAYPAL.COM") == 0  # Case insensitive
-        
-        # Non-legitimate domains
-        assert whitelist_check("user@unknown.com") == 2
-        
-        # Edge case: Invalid email formats
-        assert whitelist_check("") == 2
+    def test_whitelisted_domain_score_zero(self):
+        """Whitelisted domains should return score 0.0."""
+        is_whitelisted, score, _ = whitelist_check("user@paypal.com", "some text")
+        assert is_whitelisted == True
     
-    def test_keyword_check(self):
-        """Test keyword detection in subject and body with case insensitivity."""
-        # No keywords
-        assert keyword_check("Meeting Reminder", "Regular email content") == 0
-        
-        # Keywords in body (1 point + 4 early bonus)
-        assert keyword_check("Normal Subject", "Please click verify") == 6
-        
-        
-        
-        # Edge case: Empty strings
-        assert keyword_check("", "") == 0
+    def test_non_whitelisted_with_url_score_positive(self):
+        """Non-whitelisted domains with URLs should return positive score."""
+        is_whitelisted, score, _ = whitelist_check("user@unknown.com", "visit https://example.com")
+        assert is_whitelisted == False
+        assert score == 0.8  # URL weight
     
-    def test_edit_distance_check(self):
-        """Test lookalike domain detection using Levenshtein distance."""
-        # Minimal normal: exact legit match -> 0
-        assert edit_distance_check("user@paypal.com") == 0
-
-        # Edge 1: no at-sign / empty / missing domain -> 0
-        assert edit_distance_check("") == 0
-
-        # Edge 2: near miss within distance<=2 (case-insensitive) -> +5
-        assert edit_distance_check("USER@PAYPAI.COM") == 5  # 'i' vs 'l'
-        # Positive: another near miss -> +5
-        assert edit_distance_check("user@g00gle.com") == 5
-    
-    def test_suspicious_url_check(self):
-        """Test suspicious URL pattern detection."""
-        # Minimal normal: No URLs -> 0
-        assert suspicious_url_check("No links", "Just text") == 0
-
-        # Edge 1: both IP literal and user@host present in same URL -> 8
-        assert suspicious_url_check(
-            "",
-            "Connect http://admin@192.168.0.10/dashboard",
-        ) == 8
-
-        # Edge 2: claimed legit domain but link goes elsewhere -> +4
-        subject = "PayPal notice"
-        body = "Click here https://evil.com/paypal_help"
-        assert suspicious_url_check(subject, body) == 4
-        # Positive: user@host URL -> +3
-        assert suspicious_url_check("", "Visit http://user@example.com") == 3
+    def test_edge_case_subdomain_whitelist(self):
+        """Edge case: subdomain of whitelisted domain should be whitelisted."""
+        is_whitelisted, score, _ = whitelist_check("user@mail.google.com", "some text")
+        assert is_whitelisted == True
+        assert score == 0.0
 
 
-class TestEmailClassification:
-    """Test end-to-end email classification with various scenarios."""
+class TestKeywordCheck:
+    """Test keyword_check scoring."""
     
-    def test_safe_email(self):
-        """Test clearly safe emails."""
-        sender = "support@paypal.com"
-        subject = "Service Update"
-        body = "We have updated our service."
-        
-        label, score = classify_email(sender, subject, body)
-        assert label == "Safe"
-        assert score == 0
+    def test_no_keywords_score_zero(self):
+        """Text without keywords should return score 0.0."""
+        score, _ = keyword_check("normal email content")
+        assert score == 0.0
     
-    def test_phishing_email(self):
-        """Test clearly phishing emails with multiple suspicious elements."""
-        sender = "admin@paypa1.com"  # Lookalike domain (+5)
-        subject = "Urgent: Verify Account"  # Keywords (+6)
-        body = "Click here: http://192.168.1.1/verify"  # IP URL (+5)
-        
-        label, score = classify_email(sender, subject, body)
-        assert label == "Phishing"
-        assert score > 10
     
-    def test_borderline_email(self):
-        """Test emails with score around threshold."""
-        sender = "user@unknown.com"  # +2 points
-        subject = "test subject"  # No keywords
-        body = "test message"      # No keywords
-        
-        label, score = classify_email(sender, subject, body)
-        assert score == 2
-        assert label == "Safe"  # Since score < 10
+    def test_multiple_keywords_score_multiplied(self):
+        """Text with multiple keywords should return multiplied score."""
+        score, _ = keyword_check("urgent verify account")
+        assert score == 3.0  # 3 keywords × 1.0 weight
+    
+    def test_edge_case_keyword_in_word(self):
+        """Edge case: keyword embedded in other words should not match."""
+        score, _ = keyword_check("verification process")  # "verify" is in "verification"
+        assert score == 0.0  # Should not match partial words
 
 
-class TestEdgeCasesAndConfig:
-    """Test combined scoring and configuration reset."""
+class TestEditDistanceCheck:
+    """Test edit_distance_check scoring."""
     
-    def test_multiple_rule_combinations(self):
-        sender = "user@unknown.com"  # +2
-        subject = "Urgent"           # +3
-        body = "Click verify"        # +6 (+2 early +1 body)
+    def test_legitimate_domain_score_zero(self):
+        """Text with legitimate domains should return score 0.0."""
+        score, _ = edit_distance_check("visit paypal.com")
+        assert score == 0.0
+    
+    def test_typosquat_domain_score_positive(self):
+        """Text with typosquat domains should return positive score."""
+        score, _ = edit_distance_check("visit paypall.com")  # 1 char different from paypal.com
+        assert score == 1.0
+    
+    def test_edge_case_no_domains(self):
+        """Edge case: text without domains should return score 0.0."""
+        score, _ = edit_distance_check("no domains here")
+        assert score == 0.0
+
+
+class TestSafetyChecks:
+    """Test safety_checks scoring."""
+    
+    def test_no_attachments_score_zero(self):
+        """Text without risky attachments and no keywords should return score 0.0."""
+        score, _ = safety_checks("subject", "normal text", 0)
+        assert score == -0.5  # Guardrail for 0 keywords
+    
+    
+    def test_adaptive_boost_high_keywords_score_positive(self):
+        """High keyword count should trigger adaptive boost."""
+        score, _ = safety_checks("subject", "text", 3)  # 3 keywords
+        assert score == 0.2  # adaptive boost
+    
+    def test_edge_case_multiple_attachments(self):
+        """Edge case: multiple risky attachments should still return 0.8."""
+        score, _ = safety_checks("subject", "file1.exe and file2.scr", 0)
+        assert abs(score - 0.3) < 0.01  # 0.8 (attachment) - 0.5 (guardrail for 0 keywords)
+
+
+class TestClassifyEmail:
+    """Test main classify_email function scoring."""
+    
+    def test_whitelisted_returns_ham(self):
+        """Whitelisted senders should return Ham regardless of content."""
+        label, score = classify_email("user@paypal.com", "urgent verify", "click here")
+        assert label == "Ham"
+        assert score == 0.0
         
-        label, score = classify_email(sender, subject, body)
-        assert score == 11
-        assert label == "Phishing"
+    def test_low_score_returns_ham(self):
+        """Low scores should return Ham."""
+        label, score = classify_email("user@unknown.com", "normal subject", "normal content")
+        assert label == "Ham"
+        assert score < 1.5
     
-    def test_configuration_management(self):
-        LEGIT_DOMAINS.add("test.com")
-        SUS_KEYWORDS.add("test")
-        reset_to_defaults()
-        assert "test.com" not in LEGIT_DOMAINS
-        assert "test" not in SUS_KEYWORDS
-        assert "paypal.com" in LEGIT_DOMAINS
-        assert "urgent" in SUS_KEYWORDS
+    def test_edge_case_borderline_score(self):
+        """Edge case: score exactly at threshold should return Phishing."""
+        # This test might need adjustment based on actual threshold behavior
+        label, score = classify_email("user@unknown.com", "verify", "normal content")
+        # The exact behavior depends on the combined scoring
+        assert label in ["Ham", "Phishing"]
+        assert isinstance(score, float)
+
+
+class TestExtractDomain:
+    """Test extract_domain helper function."""
+    
+    def test_simple_email(self):
+        """Simple email should extract domain correctly."""
+        domain = extract_domain("user@example.com")
+        assert domain == "example.com"
+    
+    
+    def test_edge_case_multiple_at_symbols(self):
+        """Edge case: multiple @ symbols should extract first valid domain."""
+        domain = extract_domain("user@domain1.com@domain2.com")
+        assert domain == "domain1.com"

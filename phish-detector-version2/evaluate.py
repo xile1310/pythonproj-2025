@@ -6,14 +6,7 @@ from email.parser import BytesParser
 from email.message import EmailMessage
 import newrules
 def read_text(p):
-    """Read a text file as UTF-8, replacing invalid sequences.
-
-    Args:
-        p: Path to a text file.
-
-    Returns:
-        Full file contents as a single string.
-    """
+    """Read text file as UTF-8, replacing invalid sequences."""
         # Open the file at path in read mode r
         # Encode text files using utf-8
         # If invalid errors are found, replace them instead of raising an error
@@ -24,17 +17,7 @@ def read_text(p):
 
 
 def parse_email(raw):
-    """Parse email fields using BytesParser for improved accuracy.
-
-    Uses Python's email.parser.BytesParser to properly parse email headers
-    and extract sender, subject, and body content.
-
-    Args:
-        raw: Raw email text.
-
-    Returns:
-        Tuple (sender, subject, body).
-    """
+    """Parse email fields using BytesParser for improved accuracy."""
     try:
         # Convert string to bytes for BytesParser
         raw_bytes = raw.encode('utf-8', errors='replace')
@@ -91,6 +74,7 @@ def parse_email(raw):
         return sender, subject, body
 
 def load_dataset(root):
+    """Load email dataset from directory structure."""
     samples = []  # (sender, subject, body, label, path)
     
     # Define possible folder structures

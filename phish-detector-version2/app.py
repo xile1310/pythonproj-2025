@@ -5,44 +5,26 @@ import re
 import subprocess
 import sys
 import os
-from rules import (
+from newrules import (
     classify_email,
-    LEGIT_DOMAINS,
-    SUS_KEYWORDS,
-    load_config_to_rules,
-    save_rules_to_config,
-    reset_to_defaults,
     whitelist_check,
     keyword_check,
     edit_distance_check,
-    suspicious_url_check,
+)
+from config import (
+    CONFIG,
+    load_config_to_rules,
+    save_rules_to_config,
+    reset_to_defaults,
 )
 
 # Validation functions
 def valid_email(email):
-    """Validate that an email contains both '@' and '.'.
-
-    Args:
-        email: Input email string.
-
-    Returns:
-        True if both characters are present, otherwise False.
-    """
+    """Validate that email contains both '@' and '.' characters."""
     return "@" in email and "." in email
 
 def validate_inputs(sender, subject, body):
-    """Validate UI inputs for sender, subject, and body fields.
-
-    Args:
-        sender: Sender email address.
-        subject: Email subject text.
-        body: Email body text.
-
-    Returns:
-        Tuple (errors, warnings) where:
-          - errors is a list of blocking validation messages
-          - warnings is a list of non-blocking validation messages
-    """
+    """Validate UI inputs for sender, subject, and body fields."""
     errors = []
     warnings = []
     
@@ -60,6 +42,51 @@ def validate_inputs(sender, subject, body):
     
     return errors, warnings
 
+def highlight_keywords_in_fields(sender, subject, body):
+    """Show highlighted keywords in a separate display area."""
+    # Get keywords from config
+    keywords = CONFIG.get("keywords", [])
+    
+    if not keywords:
+        return
+    
+    # Find which keywords are present in the text
+    found_keywords = []
+    text_lower = (subject + "\n" + body).lower()
+    for keyword in keywords:
+        if keyword in text_lower:
+            found_keywords.append(keyword)
+    
+    if found_keywords:
+        st.markdown("### 🔍 **Keywords Detected in Your Input:**")
+        
+        # Show highlighted subject
+        if subject:
+            highlighted_subject = highlight_text(subject, found_keywords)
+            st.markdown("**Subject:**")
+            st.markdown(highlighted_subject, unsafe_allow_html=True)
+        
+        # Show highlighted body
+        if body:
+            highlighted_body = highlight_text(body, found_keywords)
+            st.markdown("**Body:**")
+            st.markdown(highlighted_body, unsafe_allow_html=True)
+
+def highlight_text(text, keywords):
+    """Highlight keywords in text with red background."""
+    import re
+    
+    highlighted_text = text
+    for keyword in keywords:
+        # Use regex to find and replace keywords (case insensitive)
+        pattern = re.compile(re.escape(keyword), re.IGNORECASE)
+        highlighted_text = pattern.sub(
+            f'<span style="background-color: #ffcccc; color: #cc0000; font-weight: bold; padding: 1px 2px; border-radius: 2px;">{keyword}</span>',
+            highlighted_text
+        )
+    
+    return highlighted_text
+
 
 st.set_page_config(page_title="Phishing Detector", #title show in the browser tab
                    page_icon="📧", #Small icon show in the browser tab
@@ -73,7 +100,7 @@ if "config_loaded" not in st.session_state:
     # mark config as already loaded
     st.session_state["config_loaded"] = True
 
-tab_analyze, tab_settings, tab_help = st.tabs(["🔎 Analyze Email", "⚙️ Settings", "❓ Help & Testing"]) #created 3 tabs
+tab_analyze, tab_settings, tab_help = st.tabs(["🔎 Analyze Email", "⚙️ Settings", "❓ Help"]) #created 3 tabs
 
 #Tab 1 tab_analyze
 with tab_analyze:
@@ -118,13 +145,15 @@ with tab_analyze:
         (st.error if label == "Phishing" else st.success)(
             f"Result: {label}  •  Suspicion Score: {score}"
         )
+        
+        # Highlight flagged keywords in the input fields
+        highlight_keywords_in_fields(sender, subject, body)
 
         # compute per-rule contributions for a clear breakdown
-        w = whitelist_check(sender)
-        k = keyword_check(subject, body)
-        e = edit_distance_check(sender)
-        u = suspicious_url_check(subject, body)
-        total = w + k + e + u  # should match the score
+        is_whitelisted, w_score, w_reasons = whitelist_check(sender, (subject + "\n" + body).lower())
+        k_score, k_reasons = keyword_check((subject + "\n" + body).lower())
+        e_score, e_reasons = edit_distance_check((subject + "\n" + body).lower())
+        total = w_score + k_score + e_score  # should match the score
 
         #shows how scoring works
         st.markdown("**Scoring summary:**")
@@ -139,11 +168,10 @@ with tab_analyze:
         # Shows how the score calculated
         st.markdown("**Score breakdown:**")
         st.caption(
-            f"- Whitelist check: {w:+d}\n"
-            f"- Keyword checks: {k:+d}\n"
-            f"- Edit-distance (lookalike): {e:+d}\n"
-            f"- Suspicious URLs: {u:+d}\n"
-            f"- **Total** = {total} (equals Suspicion Score)"
+            f"- Whitelist/URL check: {w_score:+.1f}\n"
+            f"- Keyword checks: {k_score:+.1f}\n"
+            f"- Edit-distance (lookalike): {e_score:+.1f}\n"
+            f"- **Total** = {total:.1f} (equals Suspicion Score)"
         )
 
 #Tab 2, manage rules and settings
@@ -166,15 +194,15 @@ with tab_settings:
             elif "." not in cleaned:
                 st.error("Invalid domain. A domain must contain a '.' (e.g., example.com)")
             else:
-                LEGIT_DOMAINS.add(cleaned.lower())
+                CONFIG["legit_domains"].append(cleaned.lower())
                 save_rules_to_config()
                 st.success(f"Added: {cleaned.lower()}")
     # Remove one or more legit domains
-    if LEGIT_DOMAINS:
-        to_remove = st.multiselect("Remove selected", sorted(LEGIT_DOMAINS))
+    if CONFIG.get("legit_domains"):
+        to_remove = st.multiselect("Remove selected", sorted(CONFIG["legit_domains"]))
         if st.button("Remove domain(s)"):
             for d in to_remove:
-                LEGIT_DOMAINS.discard(d)
+                CONFIG["legit_domains"].remove(d)
             save_rules_to_config()
             st.warning(f"Removed: {', '.join(to_remove) or 'None'}")
     else:
@@ -191,20 +219,46 @@ with tab_settings:
     with k2:
         if st.button("Add keyword"):
             if new_kw.strip():
-                SUS_KEYWORDS.add(new_kw.strip().lower())
+                CONFIG["keywords"].append(new_kw.strip().lower())
                 save_rules_to_config()
                 st.success(f"Added: {new_kw.strip().lower()}")
 
     #remove one or more suspicious keywords
-    if SUS_KEYWORDS:
-        to_remove_k = st.multiselect("Remove keywords", sorted(SUS_KEYWORDS))
+    if CONFIG.get("keywords"):
+        to_remove_k = st.multiselect("Remove keywords", sorted(CONFIG["keywords"]))
         if st.button("Remove keyword(s)"):
             for k in to_remove_k:
-                SUS_KEYWORDS.discard(k)
+                CONFIG["keywords"].remove(k)
             save_rules_to_config()
             st.warning(f"Removed: {', '.join(to_remove_k) or 'None'}")
     else:
         st.caption("No keywords yet.")
+
+    st.divider()
+
+    #Title
+    st.markdown("### 🛡️ Safe terms")
+    #add new safe terms
+    s1, s2 = st.columns([2, 1])
+    with s1:
+        new_safe = st.text_input("Add safe term", placeholder="e.g., newsletter")
+    with s2:
+        if st.button("Add safe term"):
+            if new_safe.strip():
+                CONFIG["safe_terms"].append(new_safe.strip().lower())
+                save_rules_to_config()
+                st.success(f"Added: {new_safe.strip().lower()}")
+
+    #remove one or more safe terms
+    if CONFIG.get("safe_terms"):
+        to_remove_s = st.multiselect("Remove safe terms", sorted(CONFIG["safe_terms"]))
+        if st.button("Remove safe term(s)"):
+            for s in to_remove_s:
+                CONFIG["safe_terms"].remove(s)
+            save_rules_to_config()
+            st.warning(f"Removed: {', '.join(to_remove_s) or 'None'}")
+    else:
+        st.caption("No safe terms yet.")
 
     st.divider()
 
@@ -217,25 +271,6 @@ with tab_settings:
 with tab_help:
     
     # Help section
-    st.markdown("### 📖 How to Use")
-    
-    col_text, col_info = st.columns([2, 1])
-    with col_text:
-        st.markdown("""
-        This testing interface allows you to verify that all functionality is working correctly:
-        
-        **🧪 Testing Purpose:**
-        - Verify the phishing detection engine is functioning properly
-        - Test all core rules and scoring mechanisms
-        - Ensure configuration management works correctly
-        - Validate error handling and edge cases
-        
-        **Before analyzing real emails, use the test controls below to confirm everything is operational.**
-        """)
-    
-    with col_info:
-        st.info("💡 **Tip**: Run tests regularly to ensure the detector maintains accuracy over time.")
-    
     st.markdown("### 🔧 Testing")
     st.markdown("Run pytest tests to verify the detector is working correctly:")
     

@@ -1,18 +1,42 @@
-# 📧 Simple Phishing Email Detector
-A lightweight **rule-based phishing email detector** built with Streamlit.
-It classifies emails as **Safe** or **Phishing** based on configurable rules such as domain whitelists, suspicious keywords, edit distance checks, and URL heuristics.
+# 📧 Advanced Phishing Email Detector
+A sophisticated **rule-based phishing email detector** built with Streamlit, featuring multi-layered detection using whitelist verification, keyword analysis, Levenshtein distance typosquat detection, and adaptive scoring.
 
-## How it works?
-The detector analyzes emails using four rule-based checks and assigns penalty points:
+## 🎯 How It Works
+The detector uses a **multi-layered approach** with four integrated detection functions that compute a cumulative risk score:
 
-- **Domain check** → +2 points if sender not in whitelist
-- **Keyword check** → +3 points per keyword in subject, +1 point per keyword in body, +2 points if keyword appears early in body
-- **Edit distance check** → +5 points for lookalike domains (e.g., paypa1.com vs paypal.com)
-- **Suspicious URL check** → +5 points for IP-based links, +3 points for user@host links, +4 points for claimed-domain mismatch
+### Core Detection Functions:
 
-**Final classification:**
-- Safe if total score ≤ 10
-- Phishing if total score > 10
+1. **`whitelist_check()`** - **Sender Authentication & URL Detection**
+   - Verifies sender domain against trusted whitelist
+   - Detects suspicious URLs in non-whitelisted emails
+   - **Score**: 0.0 (whitelisted) or 0.8 (URL detected)
+
+2. **`keyword_check()`** - **Suspicious Language Analysis**
+   - Scans email content for phishing-related keywords
+   - Counts and weights suspicious language patterns
+   - **Score**: 1.0 × number of keywords found
+
+3. **`edit_distance_check()`** - **Typosquat Domain Detection**
+   - Uses Levenshtein distance algorithm to detect domain similarity
+   - Compares found domains against legitimate domains
+   - Identifies typosquat attempts (≤2 character differences)
+   - **Score**: 1.0 (if typosquat detected)
+
+4. **`safety_checks()`** - **Advanced Content Analysis & Adaptive Scoring**
+   - Detects risky file attachments (.exe, .scr, etc.)
+   - Identifies safe terms (newsletters, unsubscribe)
+   - Implements guardrail logic (reduces false positives for low-keyword emails)
+   - Provides adaptive scoring (boosts high-keyword emails)
+   - **Score**: Variable based on content analysis
+
+### Key Features:
+- **Merged Function Architecture**: URL detection integrated with whitelist checking
+- **Dynamic Typosquat Detection**: No predefined suspicious domain lists needed
+- **Adaptive Scoring**: Adjusts penalties based on keyword intensity
+- **Multi-layered Defense**: Combines sender verification, content analysis, domain similarity, and URL inspection
+- **Configurable Thresholds**: All scoring weights and detection thresholds are adjustable
+
+**Final Classification**: Emails with total score ≥ 1.5 are classified as "Phishing", while scores < 1.5 are classified as "Ham".
 
 # 🚀 Getting Started
 
@@ -60,37 +84,103 @@ pip install -r requirements.txt
 **Dependencies installed:**
 - **Streamlit 1.36.0** - Web framework for the phishing detector interface
 - **OpenPyXL 3.1.0+** - Library for reading/writing Excel files
-- **pytest 6.0.0+** - Testing framework for running automated tests
+- **pytest 8.4.2+** - Testing framework for running automated tests
 
 If you encounter any installation issues, try upgrading pip first:
 ```bash
 python -m pip install --upgrade pip
 ```
-# Running the program
-- Please ensure the dependencies are all installed properly and your virual environment is activated (If you choose to use it)
-- If the scripts ran correctly, the web app should launch itself, if not you can run it manually by running this command in the terminal:
-### 1: Run the Web App
-```
+
+# 🏃‍♂️ Running the Program
+
+## 1. Run the Web App
+```bash
 streamlit run phish-detector-version2/app.py
 ```
 A new window will be launched in your browser.
-### 2: Evaluate on Dataset
-- To evaluate large number of email files, upload the files into the dataset and run this command:
+
+## 2. Evaluate on Datasets
+
+### Basic Evaluation Commands:
+
+**Run evaluation on specific dataset:**
+```bash
+cd phish-detector-version2
+python evaluate.py --data-dir dataset
+python evaluate.py --data-dir dataset2
+python evaluate.py --data-dir dataset3
+python evaluate.py --data-dir dataset4
 ```
-cd .\phish-detector-version2
-python .\evaluate.py --data-dir .\dataset -out .\results.xlsx
+
+**Run evaluation with Excel output:**
+```bash
+cd phish-detector-version2
+python evaluate.py --data-dir dataset -out results.xlsx
 ```
+
+### Complete Evaluation (All 4 Datasets):
+```bash
+cd phish-detector-version2
+python evaluate.py --data-dir dataset
+python evaluate.py --data-dir dataset2
+python evaluate.py --data-dir dataset3
+python evaluate.py --data-dir dataset4
+```
+
+**Example Output:**
 ```yaml
-  Example Output:
-  === Evaluation Report ===
-  Dataset: dataset  |  Total: 4198 (ham=2801, phish=1397)
-  Accuracy : 0.7273
-  Confusion Matrix  TP=270  FP=18  FN=1127  TN=2783
+=== Evaluation Report ===
+Dataset: dataset  |  Total: 4198 (ham=2801, phish=1397)
+Accuracy : 0.7249
+Confusion Matrix  TP=619  FP=377  FN=778  TN=2424
 ```
+
+## 3. Run Tests
+
+### Command Line Testing:
+```bash
+# From phish-detector-version2 directory
+cd phish-detector-version2
+
+# Run all tests with verbose output
+python -m pytest test/test_rules.py -v
+
+# Run tests without verbose output
+python -m pytest test/test_rules.py
+
+# Run specific test class
+python -m pytest test/test_rules.py::TestWhitelistCheck -v
+
+# Run specific test method
+python -m pytest test/test_rules.py::TestWhitelistCheck::test_whitelisted_domain_score_zero -v
+```
+
+### Web Interface Testing
+
+The web interface includes a built-in testing feature:
+
+1. **Launch the web app:**
+   ```bash
+   streamlit run phish-detector-version2/app.py
+   ```
+
+2. **Navigate to the "Help & Testing" tab** in the web interface
+
+3. **Click "🧪 Run All Tests"** button to execute the test suite
+
+**Test Coverage (17 tests):**
+- **TestWhitelistCheck (3 tests)**: Whitelisted domain scoring, URL detection, subdomain edge cases
+- **TestKeywordCheck (3 tests)**: No keywords, multiple keywords, embedded keyword edge cases
+- **TestEditDistanceCheck (3 tests)**: No domains, typosquat detection, exact match edge cases
+- **TestSafetyChecks (3 tests)**: No attachments, adaptive boost, multiple attachments edge cases
+- **TestClassifyEmail (3 tests)**: Whitelisted senders, low scores, borderline cases
+- **TestExtractDomain (2 tests)**: Simple email extraction, multiple @ symbols edge cases
+
+**💡 Pro Tip:** Run tests regularly to ensure the detector maintains accuracy over time!
 
 # ⚙️ Configuration
 
-`config.json` stores your customizable rules for whitelist domains and suspicious keywords.
+`config.json` stores your customizable rules for whitelist domains, suspicious keywords, and detection thresholds.
 
 ### Adding Domains/Keywords
 1. **Web Interface:** Type in the "Add domain" or "Add keyword" field and click the respective button
@@ -103,106 +193,22 @@ python .\evaluate.py --data-dir .\dataset -out .\results.xlsx
 ### Tips
 - Add your company domains to `legit_domains`
 - Include common phishing words in `keywords`
+- Adjust `phish_score` threshold (lower = more sensitive, higher = less sensitive)
 - Changes are saved automatically in web interface
 
-# 🧪 Testing
+# 📊 Performance Results
 
-Run tests to verify the detector is working correctly:
+## Current Performance (All 4 Datasets):
 
-## 🌐 Web Interface Testing
+| Dataset | Total Emails | Ham | Phish | Accuracy | True Positives | False Positives | False Negatives | True Negatives |
+|---------|-------------|-----|-------|---------|------------------|-----------------|-----------------|----------------|
+| **dataset** | 4,198 | 2,801 | 1,397 | **72.49%** | 619 | 377 | 778 | 2,424 |
+| **dataset2** | 3,051 | 2,550 | 501 | **84.14%** | 195 | 178 | 306 | 2,372 |
+| **dataset3** | 1,902 | 1,401 | 501 | **78.50%** | 199 | 107 | 302 | 1,294 |
+| **dataset4** | 3,667 | 2,949 | 718 | **78.10%** | 224 | 309 | 494 | 2,640 |
 
-The web interface includes a built-in testing feature that allows you to run all tests directly from the browser:
-
-### Accessing the Testing Feature
-
-1. **Launch the web app:**
-   ```bash
-   streamlit run phish-detector-version2/app.py
-   ```
-
-2. **Navigate to the "Help & Testing" tab** in the web interface
-
-3. **Click "🧪 Run All Tests"** button to execute the test suite
-
-### Command Line Testing
-
-```bash
-# From phish-detector-version2 directory
-cd phish-detector-version2
-
-# Run tests
-cd test
-pytest -v
-
-# Or run directly
-python test_rules.py
-```
-
-**Tests include:**
-- Whitelist domain checking
-- Keyword detection and scoring
-- Lookalike domain detection
-- URL pattern detection  
-- Email classification
-
-**💡 Pro Tip:** Run the web interface tests regularly to ensure the detector maintains accuracy over time!
-
-# 💡 Troubleshooting
-
-## 🚀 Application Launch Issues
-
-**Web app won't start:**
-- **Check Python version:** Ensure Python 3.8+ is installed
-  ```bash
-  python --version
-  ```
-- **Verify dependencies:** Install all required packages
-  ```bash
-  pip install -r requirements.txt
-  ```
-- **Check port availability:** Default port 8501 might be in use
-  ```bash
-  streamlit run phish-detector-version2/app.py --server.port 8502
-  ```
-- **Permission issues on Windows:** Run PowerShell as administrator
-
-**Import errors:**
-- **Missing modules:** Reinstall dependencies
-  ```bash
-  pip install --upgrade streamlit openpyxl pytest
-  ```
-- **Virtual environment:** Ensure you're in the correct environment
-  ```bash
-  .\.venv\Scripts\Activate.ps1  # Windows
-  source .venv/bin/activate     # Linux/Mac
-  ```
-
-## 📦 Dependency Version Issues
-
-**Required versions:**
-- **Streamlit:** 1.36.0 (web interface)
-- **OpenPyXL:** 3.1.0+ (Excel file handling)
-- **pytest:** 6.0.0+ (testing framework)
-- **Python:** 3.8+ (runtime)
-
-**Version conflicts:**
-```bash
-# Check installed versions
-pip list | findstr streamlit
-pip list | findstr openpyxl
-pip list | findstr pytest
-
-# Upgrade specific packages
-pip install --upgrade streamlit==1.36.0
-pip install --upgrade openpyxl>=3.1.0
-pip install --upgrade pytest>=6.0.0
-```
-
-**Clean installation:**
-```bash
-# Uninstall and reinstall
-pip uninstall streamlit openpyxl pytest
-pip install -r requirements.txt
-```
-
-
+**Overall Statistics:**
+- **Total Emails Evaluated**: 12,818 emails across all datasets
+- **Average Accuracy**: 78.31% across all datasets
+- **Best Performance**: Dataset2 with 84.14% accuracy
+- **Detection Capabilities**: 39.6% phishing detection rate, 10.0% false positive rate
