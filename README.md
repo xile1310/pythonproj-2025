@@ -118,29 +118,6 @@ python -m pytest test/test_rules.py::TestWhitelistCheck -v
 python -m pytest test/test_rules.py::TestWhitelistCheck::test_whitelisted_domain_score_zero -v
 ```
 
-#### Web Interface Testing
-
-The web interface includes a built-in testing feature:
-
-1. **Launch the web app:**
-   ```bash
-   streamlit run phish-detector-version2/app.py
-   ```
-
-2. **Navigate to the "Help & Testing" tab** in the web interface
-
-3. **Click "🧪 Run All Tests"** button to execute the test suite
-
-**Test Coverage (17 tests):**
-- **TestWhitelistCheck (3 tests)**: Whitelisted domain scoring, URL detection, subdomain edge cases
-- **TestKeywordCheck (3 tests)**: No keywords, multiple keywords, embedded keyword edge cases
-- **TestEditDistanceCheck (3 tests)**: No domains, typosquat detection, exact match edge cases
-- **TestSafetyChecks (3 tests)**: No attachments, adaptive boost, multiple attachments edge cases
-- **TestClassifyEmail (3 tests)**: Whitelisted senders, low scores, borderline cases
-- **TestExtractDomain (2 tests)**: Simple email extraction, multiple @ symbols edge cases
-
-**💡 Pro Tip:** Run tests regularly to ensure the detector maintains accuracy over time!
-
 ## 🎯 How It Works
 The detector uses a **multi-layered approach** with four integrated detection functions that compute a cumulative risk score:
 
@@ -169,12 +146,6 @@ The detector uses a **multi-layered approach** with four integrated detection fu
    - Provides adaptive scoring (boosts high-keyword emails)
    - **Score**: Variable based on content analysis
 
-### Key Features:
-- **Merged Function Architecture**: URL detection integrated with whitelist checking
-- **Dynamic Typosquat Detection**: No predefined suspicious domain lists needed
-- **Adaptive Scoring**: Adjusts penalties based on keyword intensity
-- **Multi-layered Defense**: Combines sender verification, content analysis, domain similarity, and URL inspection
-- **Configurable Thresholds**: All scoring weights and detection thresholds are adjustable
 
 **Final Classification**: Emails with total score ≥ 1.5 are classified as "Phishing", while scores < 1.5 are classified as "Ham".
 
