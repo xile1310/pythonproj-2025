@@ -165,7 +165,7 @@ with tab_analyze:
             "- Keywords: subject +3, body +1, early body +2\n"
             "- Lookalike of legit domain (edit distance ≤2) → +5\n"
             "- Suspicious URLs (IP / user@host / claimed-domain mismatch) → up to +5/+4\n"
-            "- Final: score ≥ 10 → Phishing"
+            "- Final: score ≥ 2.5 → Phishing"
         )
 
         # Shows how the score calculated
